@@ -1,78 +1,297 @@
-<h1 id="title">Title</h1>
-<p>SRFI XYZ: Generic Tuple Store Database</p>
-<h1 id="author">Author</h1>
-<p>Amirouche Boubekki</p>
-<h1 id="status">Status</h1>
-<p>???</p>
-<h1 id="abstract">Abstract</h1>
-<p>This library is a generic approach to the database abstractions known as triplestore and quadstore. Generic Tuple Store Database implements n-tuple ordered sets and associated primitives for working with them in the context of data management.</p>
-<h1 id="rationale">Rationale</h1>
-<p>The industry standard for durable data storage namely Relational Database Management Systems (RDBMS) do not blend nicely into Scheme. In particular, the SQL programming language is very difficult to embed in Scheme without fallbacks to string interpolations. This could explain the poor support of RDBMS in Scheme implementations.</p>
-<p>This SRFI propose a powerful database abstraction for storing and querying data that integrates well in existing Scheme landscape by re-using <a href="https://srfi.schemers.org/srfi-9/">SRFI-9</a>, <a href="https://srfi.schemers.org/srfi-128/">SRFI-128</a>, <a href="https://srfi.schemers.org/srfi-146/">SRFI-146</a>, <a href="https://srfi.schemers.org/srfi-158/">SRFI-158</a> and it relies on <a href="https://git.io/fjmeu">Ordered Key Value Store SRFI</a>. This SRFI comes with an memory storage engine that support transactions. It can be adapted to easily implement durability relying on one of the various existing ordered key-value store libraries available in the wild.</p>
-<p>This SRFI does not overlap with existing SRFIs.</p>
-<h1 id="specification">Specification</h1>
-<p>This specification defines four disjoint types:</p>
-<ul>
-<li><code>nstore</code> is a n-tuple store database where n is fixed.</li>
-<li><code>engine</code> is exposes a lexicographically ordered key store interface as described in Ordered Key Value Store SRFI.</li>
-<li><code>transaction</code> is a handle over a running transaction.</li>
-<li><code>variable</code> is an immutable object associcated with a symbol.</li>
-</ul>
-<p>Also an implementation must rely on srfi-158 generators to implement streams and srfi-146 mapping hash to implement bindings.</p>
-<p>The first section describe the public interface of the tuple store abstraction. The second describe the <code>engine</code> type that allows to make the storage mechanic configurable.</p>
-<h2 id="pluggable-storage-engine">Pluggable Storage Engine</h2>
-<p>Storage engine type expose the interface described in Ordered Key Value Store SRFI so that it possible to swap one storage engine with another seamlessly.</p>
-<h3 id="engine-database-close-begin-commit-rollback-ref-set-rm-range"><code>(engine database close begin! commit! rollback! ref set! rm! range)</code></h3>
-<p>Returns an object suitable to pass to <code>make</code> procedure.</p>
-<h2 id="generic-tuple-store-database">Generic Tuple Store Database</h2>
-<p>The database abstraction that is described in this section is an ordered set of tuples with n objects. A given store will always contain tuples of the same length. Tuples are always passed as rest arguments to the database procedures. Because of that they might be represented as lists in the application using the store.</p>
-<h3 id="make-engine-.-items"><code>(make engine . items)</code></h3>
-<p>Returns an object that can be passed as first argument to the procedures “decorated” with <code>transactional</code>. <code>ENGINE</code> is described above. <code>ITEMS</code> describe the names given to a tuple’s items. It should be a list of symbols.</p>
-<p>In the following <code>ITEMS</code> is always a list of scheme objects. What is accepted in <code>ITEMS</code> list depends on the implementation.</p>
-<h3 id="close-nstore"><code>(close nstore)</code></h3>
-<p>Close <code>NSTORE</code>.</p>
-<h3 id="transactional-proc---procedure"><code>(transactional proc) -&gt; procedure</code></h3>
-<p>Takes a procedure as argument that takes a transaction object as first argument and zero or more arguments. <code>transactional</code> will return a procedure that can be called with a transaction object or a store object as first argument. <code>transactional</code> has the responsability to begin, commit, rollback and retry transaction when appropriate. In case of exception during the transaction, it is up to <code>transactional</code> to rollback the transaction and re-raise the exception if appropriate. In the case where the implementation implements transaction retry, <code>PROC</code> must be idempotent.</p>
-<p><code>transactional</code> allows to compose procedures that interact with the database without manually having to manage transactions.</p>
-<p>A procedure is said to be decorated with <code>transactional</code> when it is passed to <code>transactional</code> and assigned to a scheme variable:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode scheme"><code class="sourceCode scheme"><a class="sourceLine" id="cb1-1" data-line-number="1">(<span class="kw">define</span><span class="fu"> everything </span>(transactional %everything))</a></code></pre></div>
-<p>In the above <code>%everything</code> is decorated by <code>transactional</code> and assigned to <code>everything</code>.</p>
-<h3 id="everything-some"><code>(everything some)</code></h3>
-<p>Returns the items that are in <code>NSTORE</code> returned as an SRFI-158 generator of lists. This is a procedure for debugging. Actual querying of the database must be done with <code>from</code> and <code>where</code> procedures. The stream must be ordered as described in Ordered Key Value Store SRFI.</p>
-<h3 id="ask-some-.-items"><code>(ask? some . items)</code></h3>
-<p>Must be decorated with transactional so that it is possible to pass a transaction or a nstore object.</p>
-<p>Returns <code>#t</code> if <code>ITEMS</code> is present in the store associated with <code>TRANSACTION</code>. Otherwise it returns <code>#f</code>.</p>
-<h3 id="add-some-.-items"><code>(add! some . items)</code></h3>
-<p>Must be decorated with transactional so that it is possible to pass a transaction or a nstore object as first argument.</p>
-<p>Add <code>ITEMS</code> to the store associated with <code>TRANSACTION</code>. If <code>ITEMS</code> is already in the associated store it does nothing. Returned value is unspecified.</p>
-<h3 id="rm-some-.-items"><code>(rm! some . items)</code></h3>
-<p>Must be decorated with transactional so that it is possible to pass a transaction or a nstore object as first argument.</p>
-<p>Removes <code>ITEMS</code> from the store associated with <code>TRANSACTION</code>. It does nothing if <code>ITEMS</code> is not in the store. Returned value is unspecified.</p>
-<h3 id="var-name"><code>(var name)</code></h3>
-<p>Returns an object of a disjoint type <code>variable</code> associated with the symbol <code>NAME</code>.</p>
-<h3 id="var-obj-boolean"><code>(var? obj) → boolean</code></h3>
-<p>Returns <code>#t</code> if <code>OBJ</code> is a variable as returned by <code>var</code> procedure. Otherwise it returns <code>#f</code>.</p>
-<h3 id="var-name-variable-symbol"><code>(var-name variable) → symbol</code></h3>
-<p>Returns the symbol name associated with <code>VARIABLE</code>. If <code>VARIABLE</code> is not a variable is the sense of <code>var?</code> the returned value is unspecified.</p>
-<h3 id="from-some-.-pattern-generator"><code>(from some . pattern) → generator</code></h3>
-<p>Must be decorated with transactional so that it is possible to pass a transaction or a nstore object as first argument.</p>
-<p>Returns a generator of bindings where variables in sens of <code>var?</code> of <code>PATTERN</code> are bound against one or more <em>matching</em> tuples from the store associated with <code>TRANSACTION</code>. The implementation must return a srfi-158 generator of srfi-146 hash mappings.</p>
-<p>The returned generator is called seed generator because it doesn’t rely on an existing generator of bindings.</p>
-<p><strong>Note:</strong> Making the stream ordered, in this case, might not be worthwhile. If there is an interest it might be the subject of a future srfi. Also it will be required to define an efficient mapping that remembers key-value insertion order which will allow to define a total order between bindings.</p>
-<h3 id="where-some-.-pattern-procedure-generator"><code>(where some . pattern) → procedure → generator</code></h3>
-<p>Must be decorated with transactional so that it is possible to pass a transaction or a nstore object as first argument.</p>
-<p>Returns a procedure that takes a generator of bindings as argument and returns a generator of bindings where variables of <code>PATTERN</code> are bound to one or more <em>matching</em> tuples from the store associated with <code>TRANSACTION</code>.</p>
-<p>Here is an example use of <code>where</code> in conjunction with <code>from</code> that fetch the title of article that have scheme as tag:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode scheme"><code class="sourceCode scheme"><a class="sourceLine" id="cb2-1" data-line-number="1">(<span class="kw">define</span><span class="fu"> seed </span>(from transaction &#39;article (var &#39;uid) &#39;tag &#39;scheme))</a>
-<a class="sourceLine" id="cb2-2" data-line-number="2">(<span class="kw">define</span><span class="fu"> articles </span>((where transaction &#39;article (var &#39;uid) &#39;title (var &#39;title)) seed))</a></code></pre></div>
-<p><code>articles</code> variable contains a generator of bindings with <code>uid</code> and <code>title</code> keys of all the articles that have scheme as tag.</p>
-<p>Note: The generator returned by <code>where</code> is flat. It is NOT a generator of generators.</p>
-<h1 id="implementation">Implementation</h1>
-<p>wip</p>
-<h1 id="acknowledgements">Acknowledgements</h1>
-<p>Credits goes first to Cognitect for creating Datomic database which inspired this work. StackOverflow user zhoraster helped pin the mathematics behind the generic implementation of n-tuple stores and Mike Earnest provided an algorithm to compute the minimal set of tuple items permutations that allows efficient querying. Also, some credits goes FoundationDB for the lexicographic packing algorithms and the idea of the transactional procedure. The author would like to thank Arthur A. Gleckler, Marc Nieper-Wißkirchen for getting together SRFI 146 and Shiro Kawai, John Cowan, Thomas Gilray for working on SRFI 158.</p>
-<h1 id="copyright">Copyright</h1>
-<p>Copyright (C) Amirouche Boubekki (2019).</p>
-<p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
-<p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
-<p>THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SRFI 168: Generic Tuple Store Database</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+  </head>
+  <body>
+
+    <h1>Title</h1>
+
+    <p>SRFI 168: Generic Tuple Store Database</p>
+
+    <h1>Author</h1>
+
+    <p>Amirouche Boubekki</p>
+
+    <h1>Status</h1>
+
+    <p>This SRFI is currently in <em>draft</em> status.  Here is
+      <a href="https://srfi.schemers.org/srfi-process.html">an
+	explanation</a> of each status that a SRFI can hold.  To provide
+      input on this SRFI, please send email to
+      <code><a href="mailto:srfi+minus+168+at+srfi+dotschemers+dot+org">srfi-168@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.
+      To subscribe to the list, follow
+      <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these
+	instructions</a>.  You can access previous messages via the
+      mailing list <a href="https://srfi-email.schemers.org/srfi-168">archive</a>.</p>
+
+    <ul>
+      <li>Received: 2019/4/13</li>
+      <li>60-day deadline: 2019/6/17</li>
+      <li>Draft #1 published: 2019/4/18</li>
+    </ul>
+
+    <h1>Abstract</h1>
+
+    <p>This library is a generic approach to the database abstractions
+      known as triplestore and quadstore.  Generic Tuple Store
+      Database implements n-tuple ordered sets and associated
+      primitives for working with them in the context of data
+      management.</p>
+
+    <h1>Rationale</h1>
+
+    <p>The industry standard for durable data storage namely
+      Relational Database Management Systems (RDBMS) do not blend nicely
+      into Scheme.  In particular, the SQL programming language is very
+      difficult to embed in Scheme without fallbacks to string
+      interpolations.  This could explain the poor support of RDBMS in
+      Scheme implementations.</p>
+
+    <p>This SRFI propose a powerful database abstraction for storing
+      and querying data that integrates well in existing Scheme
+      landscape by re-using <a href="https://srfi.schemers.org/srfi-9/">SRFI-9</a>,
+      <a href="https://srfi.schemers.org/srfi-128/">SRFI-128</a>,
+      <a href="https://srfi.schemers.org/srfi-146/">SRFI-146</a>,
+      <a href="https://srfi.schemers.org/srfi-158/">SRFI-158</a> and
+      it relies on <a href="https://git.io/fjmeu">Ordered Key Value
+      Store SRFI</a>.  This SRFI comes with an memory storage engine
+      that support transactions.  It can be adapted to easily
+      implement durability relying on one of the various existing
+      ordered key-value store libraries available in the wild.</p>
+
+    <p>This SRFI does not overlap with existing SRFIs.</p>
+
+    <h1>Specification</h1>
+
+    <p>This specification defines four disjoint types:</p>
+
+    <ul>
+      <li><code>nstore</code> is a n-tuple store database where n is
+	fixed.</li>
+      <li><code>engine</code> is exposes a lexicographically ordered
+	key store interface as described in Ordered Key Value Store
+	SRFI.</li>
+      <li><code>transaction</code> is a handle over a running
+	transaction.</li>
+      <li><code>variable</code> is an immutable object associcated
+	with a symbol.</li>
+    </ul>
+
+    <p>Also an implementation must rely on srfi-158 generators to
+      implement streams and srfi-146 mapping hash to implement bindings.</p>
+
+    <p>The first section describe the public interface of the tuple
+      store abstraction.  The second describe the <code>engine</code>
+      type that allows to make the storage mechanic configurable.</p>
+
+    <h2 id="pluggable-storage-engine">Pluggable Storage Engine</h2>
+
+    <p>Storage engine type expose the interface described in Ordered
+      Key Value Store SRFI so that it possible to swap one storage
+      engine with another seamlessly.</p>
+
+    <h3 id="engine-database-close-begin-commit-rollback-ref-set-rm-range"><code>(engine database close begin! commit! rollback! ref set! rm! range)</code></h3>
+
+    <p>Returns an object suitable to pass to <code>make</code> procedure.</p>
+
+    <h2 id="generic-tuple-store-database">Generic Tuple Store Database</h2>
+
+    <p>The database abstraction that is described in this section is
+      an ordered set of tuples with n objects.  A given store will
+      always contain tuples of the same length.  Tuples are always
+      passed as rest arguments to the database procedures.  Because of
+      that they might be represented as lists in the application using
+      the store.</p>
+
+    <h3 id="make-engine-.-items"><code>(make engine . items)</code></h3>
+
+    <p>Returns an object that can be passed as first argument to the
+      procedures “decorated” with <code>transactional</code>.
+      <code>ENGINE</code> is described above.  <code>ITEMS</code>
+      describe the names given to a tuple’s items.  It should be a
+      list of symbols.</p>
+
+    <p>In the following <code>ITEMS</code> is always a list of scheme
+      objects.  What is accepted in <code>ITEMS</code> list depends on
+      the implementation.</p>
+
+    <h3 id="close-nstore"><code>(close nstore)</code></h3>
+
+    <p>Close <code>NSTORE</code>.</p>
+
+    <h3 id="transactional-proc---procedure"><code>(transactional proc) -&gt; procedure</code></h3>
+
+    <p>Takes a procedure as argument that takes a transaction object
+      as first argument and zero or more arguments.
+      <code>transactional</code> will return a procedure that can be
+      called with a transaction object or a store object as first
+      argument.  <code>transactional</code> has the responsability to
+      begin, commit, rollback and retry transaction when appropriate.
+      In case of exception during the transaction, it is up to
+      <code>transactional</code> to rollback the transaction and
+      re-raise the exception if appropriate.  In the case where the
+      implementation implements transaction retry, <code>PROC</code>
+      must be idempotent.</p>
+
+    <p><code>transactional</code> allows to compose procedures that
+      interact with the database without manually having to manage
+      transactions.</p>
+
+    <p>A procedure is said to be decorated with
+      <code>transactional</code> when it is passed to
+      <code>transactional</code> and assigned to a scheme variable:</p>
+
+    <div class="sourceCode" id="cb1"><pre class="sourceCode scheme"><code class="sourceCode scheme"><a class="sourceLine" id="cb1-1" data-line-number="1">(<span class="kw">define</span><span class="fu"> everything </span>(transactional %everything))</a></code></pre></div>
+
+    <p>In the above <code>%everything</code> is decorated by
+      <code>transactional</code> and assigned to
+      <code>everything</code>.</p>
+
+    <h3 id="everything-some"><code>(everything some)</code></h3>
+
+    <p>Returns the items that are in <code>NSTORE</code> returned as
+      an SRFI-158 generator of lists.  This is a procedure for
+      debugging.  Actual querying of the database must be done with
+      <code>from</code> and <code>where</code> procedures.  The stream
+      must be ordered as described in Ordered Key Value Store SRFI.</p>
+
+    <h3 id="ask-some-.-items"><code>(ask? some . items)</code></h3>
+
+    <p>Must be decorated with transactional so that it is possible to
+      pass a transaction or a nstore object.</p>
+
+    <p>Returns <code>#t</code> if <code>ITEMS</code> is present in the
+      store associated with <code>TRANSACTION</code>.  Otherwise it
+      returns <code>#f</code>.</p>
+
+    <h3 id="add-some-.-items"><code>(add! some . items)</code></h3>
+
+    <p>Must be decorated with transactional so that it is possible to
+      pass a transaction or a nstore object as first argument.</p>
+
+    <p>Add <code>ITEMS</code> to the store associated with
+      <code>TRANSACTION</code>.  If <code>ITEMS</code> is already in the
+      associated store it does nothing.  Returned value is
+      unspecified.</p>
+
+    <h3 id="rm-some-.-items"><code>(rm! some . items)</code></h3>
+
+    <p>Must be decorated with transactional so that it is possible to
+      pass a transaction or a nstore object as first argument.</p>
+
+    <p>Removes <code>ITEMS</code> from the store associated with
+      <code>TRANSACTION</code>.  It does nothing if <code>ITEMS</code>
+      is not in the store.  Returned value is unspecified.</p>
+
+    <h3 id="var-name"><code>(var name)</code></h3>
+
+    <p>Returns an object of a disjoint type <code>variable</code>
+      associated with the symbol <code>NAME</code>.</p>
+
+    <h3 id="var-obj-boolean"><code>(var? obj) → boolean</code></h3>
+
+    <p>Returns <code>#t</code> if <code>OBJ</code> is a variable as
+      returned by <code>var</code> procedure.  Otherwise it returns
+      <code>#f</code>.</p>
+
+    <h3 id="var-name-variable-symbol"><code>(var-name variable) → symbol</code></h3>
+
+    <p>Returns the symbol name associated with <code>VARIABLE</code>.
+      If <code>VARIABLE</code> is not a variable is the sense of
+      <code>var?</code> the returned value is unspecified.</p>
+
+    <h3 id="from-some-.-pattern-generator"><code>(from some . pattern) → generator</code></h3>
+
+    <p>Must be decorated with transactional so that it is possible to
+      pass a transaction or a nstore object as first argument.</p>
+
+    <p>Returns a generator of bindings where variables in sens of
+      <code>var?</code> of <code>PATTERN</code> are bound against one or
+      more <em>matching</em> tuples from the store associated with
+      <code>TRANSACTION</code>.  The implementation must return a
+      srfi-158 generator of srfi-146 hash mappings.</p>
+
+    <p>The returned generator is called seed generator because it
+      doesn’t rely on an existing generator of bindings.</p>
+
+    <p><strong>Note:</strong> Making the stream ordered, in this case,
+      might not be worthwhile.  If there is an interest it might be the
+      subject of a future srfi.  Also it will be required to define an
+      efficient mapping that remembers key-value insertion order which
+      will allow to define a total order between bindings.</p>
+
+    <h3 id="where-some-.-pattern-procedure-generator"><code>(where some . pattern) → procedure → generator</code></h3>
+
+    <p>Must be decorated with transactional so that it is possible to
+      pass a transaction or a nstore object as first argument.</p>
+
+    <p>Returns a procedure that takes a generator of bindings as
+      argument and returns a generator of bindings where variables of
+      <code>PATTERN</code> are bound to one or more <em>matching</em>
+      tuples from the store associated with
+      <code>TRANSACTION</code>.</p>
+
+    <p>Here is an example use of <code>where</code> in conjunction
+      with <code>from</code> that fetch the title of article that have
+      scheme as tag:</p>
+
+    <div class="sourceCode" id="cb2"><pre class="sourceCode scheme"><code class="sourceCode scheme"><a class="sourceLine" id="cb2-1" data-line-number="1">(<span class="kw">define</span><span class="fu"> seed </span>(from transaction 'article (var 'uid) 'tag 'scheme))</a>
+      <a class="sourceLine" id="cb2-2" data-line-number="2">(<span class="kw">define</span><span class="fu"> articles </span>((where transaction 'article (var 'uid) 'title (var 'title)) seed))</a></code></pre></div>
+
+    <p><code>articles</code> variable contains a generator of bindings
+      with <code>uid</code> and <code>title</code> keys of all the
+      articles that have scheme as tag.</p>
+
+    <p>Note: The generator returned by <code>where</code> is flat.  It
+      is NOT a generator of generators.</p>
+
+    <h1>Implementation</h1>
+
+    <p>wip</p>
+
+    <h1>Acknowledgements</h1>
+
+    <p>Credits goes first to Cognitect for creating Datomic database
+      which inspired this work.  StackOverflow user zhoraster helped
+      pin the mathematics behind the generic implementation of n-tuple
+      stores and Mike Earnest provided an algorithm to compute the
+      minimal set of tuple items permutations that allows efficient
+      querying.  Also, some credits goes FoundationDB for the
+      lexicographic packing algorithms and the idea of the
+      transactional procedure.  The author would like to thank Arthur
+      A. Gleckler, Marc Nieper-Wißkirchen for getting together SRFI
+      146 and Shiro Kawai, John Cowan, Thomas Gilray for working on
+      SRFI 158.</p>
+
+    <h1>Copyright</h1>
+
+    <p>Copyright (C) Amirouche Boubekki (2019).</p>
+
+    <p>Permission is hereby granted, free of charge, to any person
+      obtaining a copy of this software and associated documentation
+      files (the “Software”), to deal in the Software without
+      restriction, including without limitation the rights to use,
+      copy, modify, merge, publish, distribute, sublicense, and/or
+      sell copies of the Software, and to permit persons to whom the
+      Software is furnished to do so, subject to the following
+      conditions:</p>
+
+    <p>The above copyright notice and this permission notice shall be
+      included in all copies or substantial portions of the
+      Software.</p>
+
+    <p>THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+      NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+      BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+      ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+      CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.</p>
+  </body>
+</html>
