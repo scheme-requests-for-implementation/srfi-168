@@ -33,7 +33,7 @@
       <li>Received: 2019/4/13</li>
       <li>60-day deadline: 2019/6/17</li>
       <li>Draft #1 published: 2019/4/18</li>
-      <li>Draft #2 published: 2019/4/XY</li>
+      <li>Draft #2 published: 2019/4/29</li>
     </ul>
 
     <h1>Abstract</h1>
@@ -76,7 +76,7 @@
         <li><code>engine</code> exposes a lexicographically ordered key
 	    store interface as described in the Ordered Key Value Store
 	    SRFI.</li>
-        <li><code>nstore</code> is a n-tuple store database where n is
+        <li><code>nstore</code> is an n-tuple store database where n is
 	    fixed.</li>
       <li><code>variable</code> is an immutable object associated
 	  with a symbol.</li>
@@ -104,7 +104,7 @@
 
     <h3 id="nstore-engine?"><code>(nstore-engine? object)</code></h3>
 
-    <p>Return an true if <code>OBJECT</code> is a nstore engine.  And
+    <p>Return true if <code>OBJECT</code> is an nstore engine and
     false otherwise.</p>
 
     <h2 id="generic-tuple-store-database">Generic Tuple Store Database</h2>
@@ -116,8 +116,8 @@
 
     <h3 id="nstore"><code>(nstore database engine . items)</code></h3>
 
-    <p>Return a <code>nstore</code> object. <code>ENGINE</code> is
-        described above.  <code>DATABASE</code> is okvs object as
+    <p>Return an <code>nstore</code> object. <code>ENGINE</code> is
+        described above.  <code>DATABASE</code> is an okvs object as
         described in SRFI-167.  <code>ITEMS</code> describes the names
         given to a tuple’s items.  It should be a list of symbols.</p>
 
@@ -127,8 +127,8 @@
 
     <h3 id="nstore-predicate"><code>(nstore? object)</code></h3>
 
-    <p>Return a <code>#t</code> if <code>OBJECT</code> is a nstore
-        object. And <code>#f</code> otherwise.</p>
+    <p>Return a <code>#t</code> if <code>OBJECT</code> is an nstore
+        object and <code>#f</code> otherwise.</p>
 
     <h3 id="close-nstore"><code>(nstore-close nstore)</code></h3>
 
@@ -201,7 +201,7 @@
       <code>SOME</code>.  The implementation must return a
       SRFI-158 generator of SRFI-146 hash mappings.</p>
 
-    <p>The returned generator is called <em>seed</em> generator
+    <p>The returned generator is called the <em>seed</em> generator
       because it doesn’t rely on an existing generator of bindings.</p>
 
     <p><strong>Note:</strong> Making the stream ordered, in this case,
@@ -227,7 +227,7 @@
 
     <h3 id="nstore-select"><code>(nstore-select &lt;from&gt; &lt;where&gt; ...)</code> syntax</h3>
 
-    <p><code>nstore-select</code> allows to compose <code>nstore-from</code>
+    <p><code>nstore-select</code> allows one to compose <code>nstore-from</code>
         with one or more <code>nstore-where</code> to execute a query.</p>
 
     <h1>Implementation</h1>
