@@ -130,18 +130,6 @@
     <p>Return a <code>#t</code> if <code>OBJECT</code> is an nstore
         object and <code>#f</code> otherwise.</p>
 
-    <h3 id="close-nstore"><code>(nstore-close nstore)</code></h3>
-
-    <p>Close <code>NSTORE</code>.</p>
-
-    <h3 id="nstore-everything"><code>(nstore-everything database nstore)</code></h3>
-
-    <p>Return the items that are in <code>NSTORE</code> as an SRFI-158
-        generator of lists.  This is a procedure for debugging.  Actual
-        querying of the database must be done with
-        <code>nstore-from</code> and <code>nstore-where</code> procedures.
-        The stream must be ordered lexicographically.</p>
-
     <h3 id="nstore-ask"><code>(nstore-ask? some nstore . items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
