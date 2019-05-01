@@ -97,7 +97,7 @@
       Ordered Key Value Store SRFI so that it possible to swap one
       storage engine with another seamlessly.</p>
 
-    <h3 id="nstore-engine"><code>(nstore-engine ref set! rm! range)</code></h3>
+    <h3 id="nstore-engine"><code>(nstore-engine ref set! rm! prefix)</code></h3>
 
     <p>Return an object suitable to pass to the <code>nstore</code>
         procedure.</p>
@@ -114,7 +114,7 @@
       will always contain tuples of the same length.  Tuples are
       always passed as rest arguments to the database procedures.</p>
 
-    <h3 id="nstore"><code>(nstore database engine . items)</code></h3>
+    <h3 id="nstore"><code>(nstore engine prefix . items)</code></h3>
 
     <p>Return an <code>nstore</code> object. <code>ENGINE</code> is
         described above.  <code>DATABASE</code> is an okvs object as
