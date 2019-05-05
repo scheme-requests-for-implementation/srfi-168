@@ -177,7 +177,7 @@
       If <code>VARIABLE</code> is not a variable is the sense of
       <code>var?</code>, the returned value is unspecified.</p>
 
-    <h3 id="nstore-from"><code>(nstore-from some nstore pattern) → generator</code></h3>
+    <h3 id="nstore-from"><code>(nstore-from some nstore pattern config) → generator</code></h3>
 
     <p>Must be decorated with <code>transactional</code> so that it is
       possible to pass a transaction or a database object as first
@@ -193,10 +193,37 @@
       because it doesn’t rely on an existing generator of bindings.</p>
 
     <p><strong>Note:</strong> Making the stream ordered, in this case,
-      might not be worthwhile.  If there is an interest, it might be
-      the subject of a future SRFI.  Also, it will be required to
-      define an efficient mapping that remembers key-value insertion
-      order which will allow defining a total order between bindings.</p>
+        might not be worthwhile.  If there is an interest, it might be
+        the subject of a future SRFI.  Also, it will be required to
+        define an efficient mapping that remembers key-value insertion
+        order which will allow defining a total order between bindings.</p>
+
+    <p><code>CONFIG</code> might contain the following options:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>key</th>
+                <th>description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>'limit</code></td>
+                <td>indicates the maximum number of tuples to return.</td>
+            </tr>
+            <tr>
+                <td><code>'reverse?</code></td>
+                <td>whether tuples will be returned in reverse
+                    lexicographical order beginning at the end of the
+                    range.</td>
+            </tr>
+            <tr>
+                <td><code>'offset</code></td>
+                <td>specify how many tuples be skipped.</td>
+            </tr>
+        </tbody>
+    </table>
 
     <h3 id="nstore-where"><code>(nstore-where some nstore pattern) → procedure → generator</code></h3>
 
