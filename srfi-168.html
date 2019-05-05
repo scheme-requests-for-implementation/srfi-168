@@ -114,7 +114,7 @@
       will always contain tuples of the same length.  Tuples are
       always passed as rest arguments to the database procedures.</p>
 
-    <h3 id="nstore"><code>(nstore engine prefix . items)</code></h3>
+    <h3 id="nstore"><code>(nstore engine prefix items)</code></h3>
 
     <p>Return an <code>nstore</code> object. <code>ENGINE</code> is
         described above.  <code>DATABASE</code> is an okvs object as
@@ -130,7 +130,7 @@
     <p>Return a <code>#t</code> if <code>OBJECT</code> is an nstore
         object and <code>#f</code> otherwise.</p>
 
-    <h3 id="nstore-ask"><code>(nstore-ask? some nstore . items)</code></h3>
+    <h3 id="nstore-ask"><code>(nstore-ask? some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
         that it is possible to pass a transaction or a database object
@@ -140,7 +140,7 @@
       store associated with <code>SOME</code>.  Otherwise,
       return <code>#f</code>.</p>
 
-    <h3 id="nstore-add"><code>(nstore-add! some nstore . items)</code></h3>
+    <h3 id="nstore-add"><code>(nstore-add! some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
       that it is possible to pass a transaction or a database object
@@ -150,7 +150,7 @@
       <code>SOME</code>.  If <code>ITEMS</code> is already in the
       associated store, do nothing.  Return value is unspecified.</p>
 
-    <h3 id="nstore-rm"><code>(nstore-rm! some nstore . items)</code></h3>
+    <h3 id="nstore-rm"><code>(nstore-rm! some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
       that it is possible to pass a transaction or a database object
@@ -177,7 +177,7 @@
       If <code>VARIABLE</code> is not a variable is the sense of
       <code>var?</code>, the returned value is unspecified.</p>
 
-    <h3 id="nstore-from"><code>(nstore-from some nstore . pattern) → generator</code></h3>
+    <h3 id="nstore-from"><code>(nstore-from some nstore pattern) → generator</code></h3>
 
     <p>Must be decorated with <code>transactional</code> so that it is
       possible to pass a transaction or a database object as first
@@ -198,7 +198,7 @@
       define an efficient mapping that remembers key-value insertion
       order which will allow defining a total order between bindings.</p>
 
-    <h3 id="nstore-where"><code>(nstore-where some nstore . pattern) → procedure → generator</code></h3>
+    <h3 id="nstore-where"><code>(nstore-where some nstore pattern) → procedure → generator</code></h3>
 
     <p>Must be decorated with <code>transactional</code> so that it is
       possible to pass a transaction or a database object as first
