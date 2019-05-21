@@ -130,34 +130,34 @@
     <p>Return a <code>#t</code> if <code>OBJECT</code> is an nstore
         object and <code>#f</code> otherwise.</p>
 
-    <h3 id="nstore-ask"><code>(nstore-ask? transaction nstore items)</code></h3>
+    <h3 id="nstore-ask"><code>(nstore-ask? some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
         that it is possible to pass a transaction or a database object
         as first argument.</p>
 
     <p>Return <code>#t</code> if <code>ITEMS</code> is present in the
-      store associated with <code>TRANSACTION</code>.  Otherwise,
+      store associated with <code>SOME</code>.  Otherwise,
       return <code>#f</code>.</p>
 
-    <h3 id="nstore-add"><code>(nstore-add! transaction nstore items)</code></h3>
+    <h3 id="nstore-add"><code>(nstore-add! some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
       that it is possible to pass a transaction or a database object
       as first argument.</p>
 
     <p>Add <code>ITEMS</code> to the store associated with
-      <code>TRANSACTION</code>.  If <code>ITEMS</code> is already in the
+      <code>SOME</code>.  If <code>ITEMS</code> is already in the
       associated store, do nothing.  Return value is unspecified.</p>
 
-    <h3 id="nstore-rm"><code>(nstore-rm! transaction nstore items)</code></h3>
+    <h3 id="nstore-rm"><code>(nstore-rm! some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
       that it is possible to pass a transaction or a database object
       as first argument.</p>
 
     <p>Remove <code>ITEMS</code> from the store associated with
-      <code>TRANSACTION</code>.  Do nothing if <code>ITEMS</code>
+      <code>SOME</code>.  Do nothing if <code>ITEMS</code>
       is not in the store.  Return value is unspecified.</p>
 
     <h3 id="nstore-var"><code>(nstore-var name)</code></h3>
@@ -177,7 +177,7 @@
       If <code>VARIABLE</code> is not a variable is the sense of
       <code>var?</code>, the returned value is unspecified.</p>
 
-    <h3 id="nstore-from"><code>(nstore-from transaction nstore pattern) → generator</code></h3>
+    <h3 id="nstore-from"><code>(nstore-from some nstore pattern) → generator</code></h3>
 
     <p>Must be decorated with <code>transactional</code> so that it is
       possible to pass a transaction or a database object as first
@@ -186,7 +186,7 @@
     <p>Return a generator of bindings where variables (in the sense of
       <code>nstore-var?</code>) of <code>PATTERN</code> are bound against one or
       more <em>matching</em> tuples from the store associated with
-      <code>TRANSACTION</code>.  The implementation must return a
+      <code>SOME</code>.  The implementation must return a
       SRFI-158 generator of SRFI-146 hash mappings.</p>
 
     <p>The returned generator is called the <em>seed</em> generator
@@ -198,7 +198,7 @@
       define an efficient mapping that remembers key-value insertion
       order which will allow defining a total order between bindings.</p>
 
-    <h3 id="nstore-where"><code>(nstore-where transaction nstore pattern) → procedure → generator</code></h3>
+    <h3 id="nstore-where"><code>(nstore-where some nstore pattern) → procedure → generator</code></h3>
 
     <p>Must be decorated with <code>transactional</code> so that it is
       possible to pass a transaction or a database object as first
@@ -208,7 +208,7 @@
       argument and returns a generator of bindings where variables of
       <code>PATTERN</code> are bound to one or more <em>matching</em>
       tuples from the store associated with
-      <code>TRANSACTION</code>.</p>
+      <code>SOME</code>.</p>
 
     <p>Note: The generator returned by <code>nstore-where</code> is flat.  It
         is NOT a generator of generators.</p>
