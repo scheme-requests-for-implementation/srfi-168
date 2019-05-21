@@ -192,12 +192,6 @@
     <p>The returned generator is called the <em>seed</em> generator
       because it doesn’t rely on an existing generator of bindings.</p>
 
-    <p><strong>Note:</strong> Making the stream ordered, in this case,
-      might not be worthwhile.  If there is an interest, it might be
-      the subject of a future SRFI.  Also, it will be required to
-      define an efficient mapping that remembers key-value insertion
-      order which will allow defining a total order between bindings.</p>
-
     <h3 id="nstore-where"><code>(nstore-where some nstore pattern) → procedure → generator</code></h3>
 
     <p>Must be decorated with <code>transactional</code> so that it is
