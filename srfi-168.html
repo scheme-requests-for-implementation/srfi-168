@@ -177,17 +177,17 @@
       If <code>VARIABLE</code> is not a variable is the sense of
       <code>var?</code>, the returned value is unspecified.</p>
 
-    <h3 id="nstore-from"><code>(nstore-from some nstore pattern [config]) → generator</code></h3>
-
-    <p>Must be decorated with <code>transactional</code> so that it is
-      possible to pass a transaction or a database object as first
-      argument.</p>
+    <h3 id="nstore-from"><code>(nstore-from transaction nstore pattern [config]) → generator</code></h3>
 
     <p>Return a generator of bindings where variables (in the sense of
       <code>nstore-var?</code>) of <code>PATTERN</code> are bound against one or
       more <em>matching</em> tuples from the store associated with
-      <code>SOME</code>.  The implementation must return a
+      <code>TRANSACTION</code>.  The implementation must return a
       SRFI-158 generator of SRFI-146 hash mappings.</p>
+
+    <p>Note: the generator is valid as long as the transaction is running.
+        If the transaction is commited the generator will not be able to
+        proceed.</p>
 
     <p>The returned generator is called the <em>seed</em> generator
         because it doesn’t rely on an existing generator of bindings.</p>
@@ -215,21 +215,20 @@
         </tbody>
     </table>
 
-
-    <h3 id="nstore-where"><code>(nstore-where some nstore pattern) → procedure → generator</code></h3>
-
-    <p>Must be decorated with <code>transactional</code> so that it is
-      possible to pass a transaction or a database object as first
-      argument.</p>
+    <h3 id="nstore-where"><code>(nstore-where transaction nstore pattern) → procedure → generator</code></h3>
 
     <p>Return a procedure that takes a generator of bindings as
       argument and returns a generator of bindings where variables of
       <code>PATTERN</code> are bound to one or more <em>matching</em>
       tuples from the store associated with
-      <code>SOME</code>.</p>
+      <code>TRANSACTION</code>.</p>
 
     <p>Note: The generator returned by <code>nstore-where</code> is flat.  It
         is NOT a generator of generators.</p>
+
+    <p>Note: the generator is valid as long as the transaction is running.
+        If the transaction is commited the generator will not be able to
+        proceed.</p>
 
     <h3 id="nstore-select"><code>(nstore-select &lt;from&gt; &lt;where&gt; ...)</code> syntax</h3>
 
