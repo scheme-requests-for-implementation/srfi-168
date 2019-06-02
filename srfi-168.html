@@ -97,7 +97,7 @@
       Ordered Key Value Store SRFI so that it possible to swap one
       storage engine with another seamlessly.</p>
 
-    <h3 id="nstore-engine"><code>(nstore-engine ref set! rm! range)</code></h3>
+    <h3 id="nstore-engine"><code>(nstore-engine ref set! rm! prefix)</code></h3>
 
     <p>Return an object suitable to pass to the <code>nstore</code>
         procedure.</p>
@@ -114,7 +114,7 @@
       will always contain tuples of the same length.  Tuples are
       always passed as rest arguments to the database procedures.</p>
 
-    <h3 id="nstore"><code>(nstore database engine . items)</code></h3>
+    <h3 id="nstore"><code>(nstore engine prefix items)</code></h3>
 
     <p>Return an <code>nstore</code> object. <code>ENGINE</code> is
         described above.  <code>DATABASE</code> is an okvs object as
@@ -130,19 +130,7 @@
     <p>Return a <code>#t</code> if <code>OBJECT</code> is an nstore
         object and <code>#f</code> otherwise.</p>
 
-    <h3 id="close-nstore"><code>(nstore-close nstore)</code></h3>
-
-    <p>Close <code>NSTORE</code>.</p>
-
-    <h3 id="nstore-everything"><code>(nstore-everything database nstore)</code></h3>
-
-    <p>Return the items that are in <code>NSTORE</code> as an SRFI-158
-        generator of lists.  This is a procedure for debugging.  Actual
-        querying of the database must be done with
-        <code>nstore-from</code> and <code>nstore-where</code> procedures.
-        The stream must be ordered lexicographically.</p>
-
-    <h3 id="nstore-ask"><code>(nstore-ask? some nstore . items)</code></h3>
+    <h3 id="nstore-ask"><code>(nstore-ask? some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
         that it is possible to pass a transaction or a database object
@@ -152,7 +140,7 @@
       store associated with <code>SOME</code>.  Otherwise,
       return <code>#f</code>.</p>
 
-    <h3 id="nstore-add"><code>(nstore-add! some nstore . items)</code></h3>
+    <h3 id="nstore-add"><code>(nstore-add! some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
       that it is possible to pass a transaction or a database object
@@ -162,7 +150,7 @@
       <code>SOME</code>.  If <code>ITEMS</code> is already in the
       associated store, do nothing.  Return value is unspecified.</p>
 
-    <h3 id="nstore-rm"><code>(nstore-rm! some nstore . items)</code></h3>
+    <h3 id="nstore-rm"><code>(nstore-rm! some nstore items)</code></h3>
 
     <p>Must be decorated with SRFI-167 <code>transactional</code> so
       that it is possible to pass a transaction or a database object
@@ -189,41 +177,58 @@
       If <code>VARIABLE</code> is not a variable is the sense of
       <code>var?</code>, the returned value is unspecified.</p>
 
-    <h3 id="nstore-from"><code>(nstore-from some nstore . pattern) → generator</code></h3>
-
-    <p>Must be decorated with <code>transactional</code> so that it is
-      possible to pass a transaction or a database object as first
-      argument.</p>
+    <h3 id="nstore-from"><code>(nstore-from transaction nstore pattern [config]) → generator</code></h3>
 
     <p>Return a generator of bindings where variables (in the sense of
       <code>nstore-var?</code>) of <code>PATTERN</code> are bound against one or
       more <em>matching</em> tuples from the store associated with
-      <code>SOME</code>.  The implementation must return a
+      <code>TRANSACTION</code>.  The implementation must return a
       SRFI-158 generator of SRFI-146 hash mappings.</p>
 
+    <p>Note: the generator is valid as long as the transaction is running.
+        If the transaction is commited the generator will not be able to
+        proceed.</p>
+
     <p>The returned generator is called the <em>seed</em> generator
-      because it doesn’t rely on an existing generator of bindings.</p>
+        because it doesn’t rely on an existing generator of bindings.</p>
 
-    <p><strong>Note:</strong> Making the stream ordered, in this case,
-      might not be worthwhile.  If there is an interest, it might be
-      the subject of a future SRFI.  Also, it will be required to
-      define an efficient mapping that remembers key-value insertion
-      order which will allow defining a total order between bindings.</p>
+    <p><code>CONFIG</code> is an optional association list that allows
+        to configure the returned generator. It takes the following
+        options:</p>
 
-    <h3 id="nstore-where"><code>(nstore-where some nstore . pattern) → procedure → generator</code></h3>
+    <table>
+        <thead>
+            <tr>
+                <th>key</th>
+                <th>description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>'offset</code></td>
+                <td>specify how many bindings must be skipped.</td>
+            </tr>
+            <tr>
+                <td><code>'limit</code></td>
+                <td>indicates the maximum number of bindings to return.</td>
+            </tr>
+        </tbody>
+    </table>
 
-    <p>Must be decorated with <code>transactional</code> so that it is
-      possible to pass a transaction or a database object as first
-      argument.</p>
+    <h3 id="nstore-where"><code>(nstore-where transaction nstore pattern) → procedure → generator</code></h3>
 
     <p>Return a procedure that takes a generator of bindings as
       argument and returns a generator of bindings where variables of
       <code>PATTERN</code> are bound to one or more <em>matching</em>
       tuples from the store associated with
-      <code>SOME</code>.</p>
+      <code>TRANSACTION</code>.</p>
 
     <p>Note: The generator returned by <code>nstore-where</code> is flat.  It
         is NOT a generator of generators.</p>
+
+    <p>Note: the generator is valid as long as the transaction is running.
+        If the transaction is commited the generator will not be able to
+        proceed.</p>
 
     <h3 id="nstore-select"><code>(nstore-select &lt;from&gt; &lt;where&gt; ...)</code> syntax</h3>
 
