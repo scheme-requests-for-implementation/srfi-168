@@ -130,34 +130,22 @@
     <p>Return a <code>#t</code> if <code>OBJECT</code> is an nstore
         object and <code>#f</code> otherwise.</p>
 
-    <h3 id="nstore-ask"><code>(nstore-ask? some nstore items)</code></h3>
-
-    <p>Must be decorated with SRFI-167 <code>transactional</code> so
-        that it is possible to pass a transaction or a database object
-        as first argument.</p>
+    <h3 id="nstore-ask"><code>(nstore-ask? transaction nstore items)</code></h3>
 
     <p>Return <code>#t</code> if <code>ITEMS</code> is present in the
-      store associated with <code>SOME</code>.  Otherwise,
+      store associated with <code>TRANSACTION</code>.  Otherwise,
       return <code>#f</code>.</p>
 
-    <h3 id="nstore-add"><code>(nstore-add! some nstore items)</code></h3>
-
-    <p>Must be decorated with SRFI-167 <code>transactional</code> so
-      that it is possible to pass a transaction or a database object
-      as first argument.</p>
+    <h3 id="nstore-add"><code>(nstore-add! transaction nstore items)</code></h3>
 
     <p>Add <code>ITEMS</code> to the store associated with
-      <code>SOME</code>.  If <code>ITEMS</code> is already in the
+      <code>TRANSACTION</code>.  If <code>ITEMS</code> is already in the
       associated store, do nothing.  Return value is unspecified.</p>
 
-    <h3 id="nstore-delete"><code>(nstore-delete! some nstore items)</code></h3>
-
-    <p>Must be decorated with SRFI-167 <code>transactional</code> so
-      that it is possible to pass a transaction or a database object
-      as first argument.</p>
+    <h3 id="nstore-delete"><code>(nstore-delete! transaction nstore items)</code></h3>
 
     <p>Delete <code>ITEMS</code> from the store associated with
-      <code>SOME</code>.  Do nothing if <code>ITEMS</code>
+      <code>TRANSACTION</code>.  Do nothing if <code>ITEMS</code>
       is not in the store.  Return value is unspecified.</p>
 
     <h3 id="nstore-var"><code>(nstore-var name)</code></h3>
