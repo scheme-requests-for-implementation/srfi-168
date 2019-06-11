@@ -1,25 +1,40 @@
 ;; Copyright © 2019 Amirouche BOUBEKKI <amirouche at hyper dev>
 ;;
-;;; Comment:
-;;
-;; - 2019/05: initial version
-;; - 2019/05: port to chez scheme
-;;
+;;; Permission is hereby granted, free of charge, to any person
+;;; obtaining a copy of this software and associated documentation
+;;; files (the "Software"), to deal in the Software without
+;;; restriction, including without limitation the rights to use,
+;;; copy, modify, merge, publish, distribute, sublicense, and/or
+;;; sell copies of the Software, and to permit persons to whom the
+;;; Software is furnished to do so, subject to the following
+;;; conditions:
+;;;
+;;; The above copyright notice and this permission notice shall be
+;;; included in all copies or substantial portions of the Software.
+;;;
+;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+;;; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+;;; OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+;;; NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+;;; HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+;;; WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+;;; OTHER DEALINGS IN THE SOFTWARE.
 (define-library (nstore)
 
   (export nstore-engine nstore nstore-ask? nstore-add! nstore-rm!
           nstore-var nstore-var? nstore-var-name
           nstore-from nstore-where nstore-select)
 
-  (import (only (chezscheme) assert))
+  (import (only (srfi :145) assume))
   (import (scheme base))
   (import (scheme case-lambda))
   (import (scheme list))
   (import (scheme comparator))
   (import (scheme mapping hash))
   (import (scheme generator))
-  (import (cffi wiredtiger okvs))
-  (import (cffi wiredtiger pack))
+
+  (import (pack))
 
   (begin
 
@@ -105,7 +120,6 @@
                 (< (car a) (car b))
                 (loop (cdr a) (cdr b))))))
 
-    ;; TODO: memoize, see fstore.scm
     (define (make-indices n)
       ;; This is based on:
       ;;
@@ -116,7 +130,7 @@
         (let loop1 ((cx cx)
                     (out '()))
           (if (null? cx)
-              (begin (assert (ok? (combinations tab) out))
+              (begin (assume (ok? (combinations tab) out))
                      (sort! lex< out))
               (let loop2 ((L (map (lambda (i) (cons i (bool (memv i (car cx))))) tab))
                           (a '())
@@ -149,15 +163,14 @@
       (make-nstore engine prefix (make-indices (length items)) (length items)))
 
     (define nstore-ask?
-      (okvs-transactional
-       (lambda (transaction nstore items)
-         (assert (= (length items) (nstore-n nstore)))
-         ;; indices are sorted in lexicographic order, that is the first
-         ;; index is always (iota n) also known as the base index. So that
-         ;; there is no need to permute ITEMS.  zero in the following
-         ;; cons* is the index of the base index in nstore-indices
-         (let ((key (apply pack (append (nstore-prefix nstore) (list 0) items))))
-           (bool ((engine-ref (nstore-engine-ref nstore)) transaction key))))))
+      (lambda (transaction nstore items)
+        (assume (= (length items) (nstore-n nstore)))
+        ;; indices are sorted in lexicographic order, that is the first
+        ;; index is always (iota n) also known as the base index. So that
+        ;; there is no need to permute ITEMS.  zero in the following
+        ;; cons* is the index of the base index in nstore-indices
+        (let ((key (apply pack (append (nstore-prefix nstore) (list 0) items))))
+          (bool ((engine-ref (nstore-engine-ref nstore)) transaction key)))))
 
     (define true (pack #t))
 
@@ -177,38 +190,36 @@
                     (cons (vector-ref items (car index)) out))))))
 
     (define nstore-add!
-      (okvs-transactional
-       (lambda (transaction nstore items)
-         (assert (= (length items) (nstore-n nstore)))
-         (let ((engine (nstore-engine-ref nstore))
-               (nstore-prefix (nstore-prefix nstore)))
-           ;; add ITEMS into the okvs and prefix each of the permutation
-           ;; of ITEMS with the nstore-prefix and the index of the
-           ;; permutation inside the list INDICES called SUBSPACE.
-           (let loop ((indices (nstore-indices nstore))
-                      (subspace 0))
-             (unless (null? indices)
-               (let ((key (apply pack (append nstore-prefix
-                                              (list subspace)
-                                              (permute items (car indices))))))
-                 ((engine-set! engine) transaction key true)
-                 (loop (cdr indices) (+ 1 subspace)))))))))
+      (lambda (transaction nstore items)
+        (assume (= (length items) (nstore-n nstore)))
+        (let ((engine (nstore-engine-ref nstore))
+              (nstore-prefix (nstore-prefix nstore)))
+          ;; add ITEMS into the okvs and prefix each of the permutation
+          ;; of ITEMS with the nstore-prefix and the index of the
+          ;; permutation inside the list INDICES called SUBSPACE.
+          (let loop ((indices (nstore-indices nstore))
+                     (subspace 0))
+            (unless (null? indices)
+              (let ((key (apply pack (append nstore-prefix
+                                             (list subspace)
+                                             (permute items (car indices))))))
+                ((engine-set! engine) transaction key true)
+                (loop (cdr indices) (+ 1 subspace))))))))
 
     (define nstore-rm!
-      (okvs-transactional
-       (lambda (transaction nstore items)
-         (assert (= (length items) (nstore-n nstore)))
-         (let ((engine (nstore-engine-ref nstore))
-               (nstore-prefix (nstore-prefix nstore)))
-           ;; Similar to the above but remove ITEMS
-           (let loop ((indices (nstore-indices nstore))
-                      (subspace 0))
-             (unless (null? indices)
-               (let ((key (apply pack (append nstore-prefix
-                                              (list subspace)
-                                              (permute items (car indices))))))
-                 ((engine-rm! engine) transaction key)
-                 (loop (cdr indices) (+ subspace 1)))))))))
+      (lambda (transaction nstore items)
+        (assume (= (length items) (nstore-n nstore)))
+        (let ((engine (nstore-engine-ref nstore))
+              (nstore-prefix (nstore-prefix nstore)))
+          ;; Similar to the above but remove ITEMS
+          (let loop ((indices (nstore-indices nstore))
+                     (subspace 0))
+            (unless (null? indices)
+              (let ((key (apply pack (append nstore-prefix
+                                             (list subspace)
+                                             (permute items (car indices))))))
+                ((engine-rm! engine) transaction key)
+                (loop (cdr indices) (+ subspace 1))))))))
 
     (define-record-type <nstore-var>
       (nstore-var name)
@@ -285,10 +296,10 @@
     (define nstore-from
       (case-lambda
         ((transaction nstore pattern)
-         (assert (= (length pattern) (nstore-n nstore)))
+         (assume (= (length pattern) (nstore-n nstore)))
          (%from transaction nstore pattern (hashmap comparator) '()))
         ((transaction nstore pattern config)
-         (assert (= (length pattern) (nstore-n nstore)))
+         (assume (= (length pattern) (nstore-n nstore)))
          (%from transaction nstore pattern (hashmap comparator) config))))
 
     (define (pattern-bind pattern seed)
@@ -303,9 +314,9 @@
            pattern))
 
     (define (gscatter generator)
-      ;; Return a generator that yields the elements of the
-      ;; generators produced by the given generator. Same as gflatten
-      ;; but the generator contains other generators instead of lists.
+      ;; Return a generator that yields the elements of the generators
+      ;; produced by the given GENERATOR. Same as gflatten but
+      ;; GENERATOR contains other generators instead of lists.
       (let ((state eof-object))
         (lambda ()
           (let ((value (state)))
@@ -322,7 +333,7 @@
 
     (define nstore-where
       (lambda (transaction nstore pattern)
-        (assert (= (length pattern) (nstore-n nstore)))
+        (assume (= (length pattern) (nstore-n nstore)))
         (lambda (from)
           (gscatter
            (gmap (lambda (bindings) (%from transaction

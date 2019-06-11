@@ -98,7 +98,7 @@
       Ordered Key Value Store SRFI so that it possible to swap one
       storage engine with another seamlessly.</p>
 
-    <h3 id="nstore-engine"><code>(nstore-engine ref set! rm! prefix)</code></h3>
+    <h3 id="nstore-engine"><code>(nstore-engine ref set! delete! prefix)</code></h3>
 
     <p>Return an object suitable to pass to the <code>nstore</code>
         procedure.</p>
@@ -112,8 +112,7 @@
 
     <p>The database abstraction described in this section is an
       ordered set of tuples with <em>n</em> objects.  A given store
-      will always contain tuples of the same length.  Tuples are
-      always passed as rest arguments to the database procedures.</p>
+      will always contain tuples of the same length.</p>
 
     <h3 id="nstore"><code>(nstore engine prefix items)</code></h3>
 
@@ -131,34 +130,22 @@
     <p>Return a <code>#t</code> if <code>OBJECT</code> is an nstore
         object and <code>#f</code> otherwise.</p>
 
-    <h3 id="nstore-ask"><code>(nstore-ask? some nstore items)</code></h3>
-
-    <p>Must be decorated with SRFI-167 <code>transactional</code> so
-        that it is possible to pass a transaction or a database object
-        as first argument.</p>
+    <h3 id="nstore-ask"><code>(nstore-ask? transaction nstore items)</code></h3>
 
     <p>Return <code>#t</code> if <code>ITEMS</code> is present in the
-      store associated with <code>SOME</code>.  Otherwise,
+      store associated with <code>TRANSACTION</code>.  Otherwise,
       return <code>#f</code>.</p>
 
-    <h3 id="nstore-add"><code>(nstore-add! some nstore items)</code></h3>
-
-    <p>Must be decorated with SRFI-167 <code>transactional</code> so
-      that it is possible to pass a transaction or a database object
-      as first argument.</p>
+    <h3 id="nstore-add"><code>(nstore-add! transaction nstore items)</code></h3>
 
     <p>Add <code>ITEMS</code> to the store associated with
-      <code>SOME</code>.  If <code>ITEMS</code> is already in the
+      <code>TRANSACTION</code>.  If <code>ITEMS</code> is already in the
       associated store, do nothing.  Return value is unspecified.</p>
 
-    <h3 id="nstore-rm"><code>(nstore-rm! some nstore items)</code></h3>
+    <h3 id="nstore-delete"><code>(nstore-delete! transaction nstore items)</code></h3>
 
-    <p>Must be decorated with SRFI-167 <code>transactional</code> so
-      that it is possible to pass a transaction or a database object
-      as first argument.</p>
-
-    <p>Remove <code>ITEMS</code> from the store associated with
-      <code>SOME</code>.  Do nothing if <code>ITEMS</code>
+    <p>Delete <code>ITEMS</code> from the store associated with
+      <code>TRANSACTION</code>.  Do nothing if <code>ITEMS</code>
       is not in the store.  Return value is unspecified.</p>
 
     <h3 id="nstore-var"><code>(nstore-var name)</code></h3>
@@ -186,7 +173,7 @@
       <code>TRANSACTION</code>.  The implementation must return a
       SRFI-158 generator of SRFI-146 hash mappings.</p>
 
-    <p>Note: the generator is valid as long as the transaction is running.
+    <p>Note: The generator is valid as long as the transaction is running.
         If the transaction is commited the generator will not be able to
         proceed.</p>
 
@@ -216,6 +203,11 @@
         </tbody>
     </table>
 
+    <p>Note: The generator order must be stable to allow pagination.</p>
+
+    <p>Note: In the case where there is single variable in <code>PATTERN</code>
+        the generator must be ordered.</p>
+
     <h3 id="nstore-where"><code>(nstore-where transaction nstore pattern) → procedure → generator</code></h3>
 
     <p>Return a procedure that takes a generator of bindings as
@@ -235,6 +227,78 @@
 
     <p><code>nstore-select</code> allows one to compose <code>nstore-from</code>
         with one or more <code>nstore-where</code> to execute a query.</p>
+
+    <h2 id="example">Example</h2>
+
+    <p>Here is an example use:</p>
+
+    <div class="sourceCode" id="cb1"><pre class="sourceCode scheme"><code class="sourceCode scheme"><a class="sourceLine" id="cb1-1" data-line-number="1">(import (scheme base))</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">(import (scheme generator))</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">(import (scheme mapping hash))</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb1-5" data-line-number="5">(import (okvs))</a>
+<a class="sourceLine" id="cb1-6" data-line-number="6">(import (nstore))</a>
+<a class="sourceLine" id="cb1-7" data-line-number="7"></a>
+<a class="sourceLine" id="cb1-8" data-line-number="8"></a>
+<a class="sourceLine" id="cb1-9" data-line-number="9">(<span class="kw">define</span><span class="fu"> </span>(make-triplestore prefix)</a>
+<a class="sourceLine" id="cb1-10" data-line-number="10">  (<span class="kw">let</span> ((engine (nstore-engine okvs-ref okvs-set! okvs-delete! okvs-prefix)))</a>
+<a class="sourceLine" id="cb1-11" data-line-number="11">    (nstore engine prefix &#39;(subject predicate object))))</a>
+<a class="sourceLine" id="cb1-12" data-line-number="12"></a>
+<a class="sourceLine" id="cb1-13" data-line-number="13"></a>
+<a class="sourceLine" id="cb1-14" data-line-number="14">(<span class="kw">define</span><span class="fu"> triplestore </span>(make-triplestore &#39;(<span class="dv">0</span>)))</a>
+<a class="sourceLine" id="cb1-15" data-line-number="15"></a>
+<a class="sourceLine" id="cb1-16" data-line-number="16">(<span class="kw">define</span><span class="fu"> database </span>(okvs <span class="st">&quot;/data&quot;</span> <span class="dv">#t</span>))</a>
+<a class="sourceLine" id="cb1-17" data-line-number="17"></a>
+<a class="sourceLine" id="cb1-18" data-line-number="18">(<span class="kw">define</span><span class="fu"> </span>(add-blog-post! transaction title body keywords)</a>
+<a class="sourceLine" id="cb1-19" data-line-number="19">  (nstore-add! transaction triplestore title &#39;post/body body)</a>
+<a class="sourceLine" id="cb1-20" data-line-number="20">  (<span class="kw">let</span> loop ((keywords keywords))</a>
+<a class="sourceLine" id="cb1-21" data-line-number="21">    (unless (<span class="kw">null?</span> keywords)</a>
+<a class="sourceLine" id="cb1-22" data-line-number="22">      (nstore-add! transaction triplestore title &#39;post/keyword (<span class="kw">car</span> keywords))</a>
+<a class="sourceLine" id="cb1-23" data-line-number="23">      (loop (<span class="kw">cdr</span> keywords)))))</a>
+<a class="sourceLine" id="cb1-24" data-line-number="24"></a>
+<a class="sourceLine" id="cb1-25" data-line-number="25">(okvs-in-transaction database</a>
+<a class="sourceLine" id="cb1-26" data-line-number="26">                     (<span class="kw">lambda</span> (transaction)</a>
+<a class="sourceLine" id="cb1-27" data-line-number="27">                       (add-blog-post! transaction</a>
+<a class="sourceLine" id="cb1-28" data-line-number="28">                                       <span class="st">&quot;Hello, world!&quot;</span></a>
+<a class="sourceLine" id="cb1-29" data-line-number="29">                                       <span class="st">&quot;First post.&quot;</span></a>
+<a class="sourceLine" id="cb1-30" data-line-number="30">                                       &#39;(scheme))))</a>
+<a class="sourceLine" id="cb1-31" data-line-number="31"></a>
+<a class="sourceLine" id="cb1-32" data-line-number="32">(okvs-in-transaction database</a>
+<a class="sourceLine" id="cb1-33" data-line-number="33">                     (<span class="kw">lambda</span> (transaction)</a>
+<a class="sourceLine" id="cb1-34" data-line-number="34">                       (add-blog-post! transaction</a>
+<a class="sourceLine" id="cb1-35" data-line-number="35">                                       <span class="st">&quot;okvs for the win&quot;</span></a>
+<a class="sourceLine" id="cb1-36" data-line-number="36">                                       <span class="st">&quot;With okvs one can build powerful abstractions.&quot;</span></a>
+<a class="sourceLine" id="cb1-37" data-line-number="37">                                       &#39;(okvs scheme database))))</a>
+<a class="sourceLine" id="cb1-38" data-line-number="38"></a>
+<a class="sourceLine" id="cb1-39" data-line-number="39">(okvs-in-transaction database</a>
+<a class="sourceLine" id="cb1-40" data-line-number="40">                     (<span class="kw">lambda</span> (transaction)</a>
+<a class="sourceLine" id="cb1-41" data-line-number="41">                       (add-blog-post! transaction</a>
+<a class="sourceLine" id="cb1-42" data-line-number="42">                                       <span class="st">&quot;Easy on-disk persistence&quot;</span></a>
+<a class="sourceLine" id="cb1-43" data-line-number="43">                                       <span class="st">&quot;nstore is a database abstraction.&quot;</span></a>
+<a class="sourceLine" id="cb1-44" data-line-number="44">                                       &#39;(nstore scheme database))))</a>
+<a class="sourceLine" id="cb1-45" data-line-number="45"></a>
+<a class="sourceLine" id="cb1-46" data-line-number="46">(okvs-in-transaction database</a>
+<a class="sourceLine" id="cb1-47" data-line-number="47">                     (<span class="kw">lambda</span> (transaction)</a>
+<a class="sourceLine" id="cb1-48" data-line-number="48">                       (add-blog-post! transaction</a>
+<a class="sourceLine" id="cb1-49" data-line-number="49">                                       <span class="st">&quot;hoply&quot;</span></a>
+<a class="sourceLine" id="cb1-50" data-line-number="50">                                       <span class="st">&quot;hoply is an implementation in python.&quot;</span></a>
+<a class="sourceLine" id="cb1-51" data-line-number="51">                                       &#39;(nstore python database))))</a>
+<a class="sourceLine" id="cb1-52" data-line-number="52"></a>
+<a class="sourceLine" id="cb1-53" data-line-number="53">(okvs-in-transaction database</a>
+<a class="sourceLine" id="cb1-54" data-line-number="54">                     (<span class="kw">lambda</span> (transaction)</a>
+<a class="sourceLine" id="cb1-55" data-line-number="55">                       (generator-map-&gt;list</a>
+<a class="sourceLine" id="cb1-56" data-line-number="56">                        (<span class="kw">lambda</span> (binding) (hashmap-ref binding &#39;post/title))</a>
+<a class="sourceLine" id="cb1-57" data-line-number="57">                        (nstore-select</a>
+<a class="sourceLine" id="cb1-58" data-line-number="58">                         (nstore-from transaction triplestore</a>
+<a class="sourceLine" id="cb1-59" data-line-number="59">                                      (<span class="kw">list</span> (nstore-var &#39;post/title)</a>
+<a class="sourceLine" id="cb1-60" data-line-number="60">                                            &#39;post/keyword</a>
+<a class="sourceLine" id="cb1-61" data-line-number="61">                                            &#39;scheme))</a>
+<a class="sourceLine" id="cb1-62" data-line-number="62">                         (nstore-where transaction triplestore</a>
+<a class="sourceLine" id="cb1-63" data-line-number="63">                                       (<span class="kw">list</span> (nstore-var &#39;post/title)</a>
+<a class="sourceLine" id="cb1-64" data-line-number="64">                                             &#39;post/keyword</a>
+<a class="sourceLine" id="cb1-65" data-line-number="65">                                             &#39;database))))))</a>
+<a class="sourceLine" id="cb1-66" data-line-number="66"></a>
+<a class="sourceLine" id="cb1-67" data-line-number="67"><span class="co">;; =&gt; &#39;(&quot;Easy on-disk persistence&quot; &quot;okvs for the win&quot;)</span></a></code></pre></div>
 
     <h1>Implementation</h1>
 
