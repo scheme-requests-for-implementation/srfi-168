@@ -152,15 +152,16 @@
       (prefix engine-prefix))
 
     (define-record-type <nstore>
-      (make-nstore engine prefix indices n)
+      (make-nstore engine prefix prefix-length indices n)
       nstore?
       (engine nstore-engine-ref)
       (prefix nstore-prefix)
+      (prefix-length nstore-prefix-length)
       (indices nstore-indices)
       (n nstore-n))
 
     (define (nstore engine prefix items)
-      (make-nstore engine prefix (make-indices (length items)) (length items)))
+      (make-nstore engine prefix (length prefix) (make-indices (length items)) (length items)))
 
     (define nstore-ask?
       (lambda (transaction nstore items)
@@ -287,7 +288,9 @@
                 (engine (nstore-engine-ref nstore)))
             (gmap (lambda (pair)
                     (bind* pattern
-                           (make-tuple (cddr (unpack (car pair))) index)
+                           (make-tuple (drop (unpack (car pair))
+                                             (+ (nstore-prefix-length nstore) 1))
+                                       index)
                            seed))
                   ((engine-prefix engine) transaction (apply pack prefix) config))))))
 
