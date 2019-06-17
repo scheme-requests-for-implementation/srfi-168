@@ -80,7 +80,7 @@
               ;; add!
               (nstore-add! transaction triplestore '("P4X432" blog/title "hyper.dev"))
               ;; remove!
-              (nstore-rm! transaction triplestore '("P4X432" blog/title "hyper.dev"))
+              (nstore-delete! transaction triplestore '("P4X432" blog/title "hyper.dev"))
               ;; ask
               (nstore-ask? transaction triplestore '("P4X432" blog/title "hyper.dev"))))))
       (okvs-close okvs)

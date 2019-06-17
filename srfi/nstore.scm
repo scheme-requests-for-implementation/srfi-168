@@ -22,7 +22,7 @@
 ;;; OTHER DEALINGS IN THE SOFTWARE.
 (define-library (nstore)
 
-  (export nstore-engine nstore nstore-ask? nstore-add! nstore-rm!
+  (export nstore-engine nstore nstore-ask? nstore-add! nstore-delete!
           nstore-var nstore-var? nstore-var-name
           nstore-from nstore-where nstore-select)
 
@@ -141,11 +141,11 @@
                                      out))))))))))
 
     (define-record-type <engine>
-      (nstore-engine ref set! rm! prefix)
+      (nstore-engine ref set! delete! prefix)
       engine?
       (ref engine-ref)
       (set! engine-set!)
-      (rm! engine-rm!)
+      (delete! engine-delete!)
       (prefix engine-prefix))
 
     (define-record-type <nstore>
@@ -179,6 +179,7 @@
         (vector->list tuple)))
 
     (define (permute items index)
+      ;; make-tuple reverse operation
       (let ((items (list->vector items)))
         (let loop ((index index)
                    (out '()))
@@ -204,7 +205,7 @@
                 ((engine-set! engine) transaction key true)
                 (loop (cdr indices) (+ 1 subspace))))))))
 
-    (define nstore-rm!
+    (define nstore-delete!
       (lambda (transaction nstore items)
         (assume (= (length items) (nstore-n nstore)))
         (let ((engine (nstore-engine-ref nstore))
@@ -216,7 +217,7 @@
               (let ((key (apply pack (append nstore-prefix
                                              (list subspace)
                                              (permute items (car indices))))))
-                ((engine-rm! engine) transaction key)
+                ((engine-delete! engine) transaction key)
                 (loop (cdr indices) (+ subspace 1))))))))
 
     (define-record-type <nstore-var>
