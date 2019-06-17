@@ -36,7 +36,7 @@
 
 (define (triplestore)
   (let ((engine (nstore-engine okvs-ref okvs-set! okvs-delete! okvs-prefix)))
-    (nstore engine (list 42) '(uid key value))))
+    (nstore engine (list 42 1337) '(uid key value))))
 
 (test-equal "ask empty triplestore"
   #f
