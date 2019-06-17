@@ -108,9 +108,6 @@
                         (car (list-ref x 1)))
                 (loop3 (cdr x) (cons (car x) y))))))
 
-    (define (bool v)
-      (not (not v)))
-
     (define (lex< a b)
       (let loop ((a a)
                  (b b))
@@ -132,7 +129,7 @@
           (if (null? cx)
               (begin (assume (ok? (combinations tab) out))
                      (sort! lex< out))
-              (let loop2 ((L (map (lambda (i) (cons i (bool (memv i (car cx))))) tab))
+              (let loop2 ((L (map (lambda (i) (cons i (not (not (memv i (car cx)))))) tab))
                           (a '())
                           (b '()))
                 (call-with-values (lambda () (findij L))
@@ -171,7 +168,7 @@
         ;; there is no need to permute ITEMS.  zero in the following
         ;; cons* is the index of the base index in nstore-indices
         (let ((key (apply pack (append (nstore-prefix nstore) (list 0) items))))
-          (bool ((engine-ref (nstore-engine-ref nstore)) transaction key)))))
+          (not (not ((engine-ref (nstore-engine-ref nstore)) transaction key))))))
 
     (define true (pack #t))
 
