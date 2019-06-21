@@ -24,7 +24,7 @@
 
   (export nstore-engine nstore nstore-ask? nstore-add! nstore-delete!
           nstore-var nstore-var? nstore-var-name
-          nstore-from nstore-where nstore-select)
+          nstore-from nstore-where nstore-query)
 
   (import (only (srfi :145) assume))
   (import (scheme base))
@@ -344,8 +344,8 @@
                                            '()))
                  from)))))
 
-    (define-syntax nstore-select
+    (define-syntax nstore-query
       (syntax-rules ()
         ((_ value) value)
         ((_ value f rest ...)
-         (nstore-select (f value) rest ...))))))
+         (nstore-query (f value) rest ...))))))

@@ -110,7 +110,7 @@
     (let ()
       (define query
         (lambda (transaction blog/title)
-          (generator->list (nstore-select
+          (generator->list (nstore-query
                             (nstore-from transaction triplestore
                                          (list (nstore-var 'blog/uid)
                                                'blog/title

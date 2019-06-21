@@ -271,6 +271,19 @@
         If the transaction is commited the generator will not be able to
         proceed.</p>
 
+    <h3 id="nstore-query"><code>(nstore-query &lt;from&gt; &lt;where&gt; ...) → generator</code> syntax</h3>
+
+    <p><code>nstore-query</code> will chain the generators passing what is generated
+        by the <code>from</code> clause to the <code>where</code> clauses in order.</p>
+
+    <p>Here the definition of <code>nstore-query</code></p>
+
+    <div><pre>    (define-syntax nstore-query
+      (syntax-rules ()
+        ((_ value) value)
+        ((_ value f rest ...)
+         (nstore-query (f value) rest ...))))</pre></div>
+
     <h2 id="example">Example</h2>
 
     <p>Here is an example use:</p>
@@ -331,7 +344,7 @@
 <a class="sourceLine" id="cb1-54" data-line-number="54">                     (<span class="kw">lambda</span> (transaction)</a>
 <a class="sourceLine" id="cb1-55" data-line-number="55">                       (generator-map-&gt;list</a>
 <a class="sourceLine" id="cb1-56" data-line-number="56">                        (<span class="kw">lambda</span> (binding) (hashmap-ref binding &#39;post/title))</a>
-<a class="sourceLine" id="cb1-57" data-line-number="57">                        (nstore-select</a>
+<a class="sourceLine" id="cb1-57" data-line-number="57">                        (nstore-query</a>
 <a class="sourceLine" id="cb1-58" data-line-number="58">                         (nstore-from transaction triplestore</a>
 <a class="sourceLine" id="cb1-59" data-line-number="59">                                      (<span class="kw">list</span> (nstore-var &#39;post/title)</a>
 <a class="sourceLine" id="cb1-60" data-line-number="60">                                            &#39;post/keyword</a>
