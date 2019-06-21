@@ -174,6 +174,24 @@
       <code>TRANSACTION</code>.  The implementation must return a
       SRFI-158 generator of SRFI-146 hash mappings.</p>
 
+    <p>A tuple <em>match</em> a pattern if the tuple has the same
+        items that are not variables as the pattern. The variable will
+        add a key-value pair in a binding that will associate the
+        pattern name with the corresponding value in the tuple.</p>
+
+    <p>For example, given the following pattern:</p>
+
+    <div><pre>(list "P4X432" "blog/url" (nstore-var 'blog/title))</pre></div>
+
+    <p>And given the following tuple in the database:</p>
+
+    <div><pre>(list "P4X432" "blog/url" "https://hyper.dev")</pre></div>
+
+    <p><code>nstore-from</code> will generate a binding that satisfy
+        the following:</p>
+
+    <div><pre>(assume (hasmap->alist binding) '((blog/title . "https://hyper.dev")))</pre></div>
+
     <p>Note: The generator is valid as long as the transaction is running.
         If the transaction is commited the generator will not be able to
         proceed.</p>
@@ -220,14 +238,38 @@
     <p>Note: The generator returned by <code>nstore-where</code> is flat.  It
         is NOT a generator of generators.</p>
 
+    <p>Let's pick the previous example and imagine that we have a generator
+        that contains a binding that satisfy the following:</p>
+
+    <div><pre>(assume (hasmap->alist binding) '((blog/url . "https://hyper.dev")))</pre></div>
+
+    <div>Given another pattern passed to <code>nstore-where</code>:</div>
+
+    <div><pre>(list (nstore-var 'blog/url) "url/valid" (nstore-var 'url/valid))</pre></div>
+
+    <p><code>nstore-where</code> will bind the pattern using the binding that
+        <code>nstore-from</code> generate as described above, which will result
+        in the following pattern:</p>
+
+    <div><pre>(list "https://hyper.dev" "url/valid" (nstore-var 'url/valid))</pre></div>
+
+    <p>Then that pattern is used to look up matching tuples in the
+        database similarly to how <code>nstore-from</code> generated the first binding.
+        If there is a matching tuple, it generate a new binding. For instance,
+        if there is a tuple like the following:</p>
+
+    <div><pre>(list "https://hyper.dev" 'url/valid #t)</pre></div>
+
+    <p>In that case, the original binding will generate one new binding that
+        associates <code>'url/valid</code> to <code>#t</code></p>
+
+    <p>Otherwise there is no matching tuple, the original binding is
+        discarded possibly making the generator returned by <code>nstore-where</code>
+        empty.</p>
+
     <p>Note: the generator is valid as long as the transaction is running.
         If the transaction is commited the generator will not be able to
         proceed.</p>
-
-    <h3 id="nstore-select"><code>(nstore-select &lt;from&gt; &lt;where&gt; ...)</code> syntax</h3>
-
-    <p><code>nstore-select</code> allows one to compose <code>nstore-from</code>
-        with one or more <code>nstore-where</code> to execute a query.</p>
 
     <h2 id="example">Example</h2>
 
