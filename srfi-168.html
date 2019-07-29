@@ -166,7 +166,7 @@
       If <code>VARIABLE</code> is not a variable is the sense of
       <code>var?</code>, the returned value is unspecified.</p>
 
-    <h3 id="nstore-from"><code>(nstore-from transaction nstore pattern [config]) → generator</code></h3>
+    <h3 id="nstore-select"><code>(nstore-select transaction nstore pattern [config]) → generator</code></h3>
 
     <p>Return a generator of bindings where variables (in the sense of
       <code>nstore-var?</code>) of <code>PATTERN</code> are bound against one or
@@ -187,7 +187,7 @@
 
     <div><pre>(list "P4X432" "blog/url" "https://hyper.dev")</pre></div>
 
-    <p><code>nstore-from</code> will generate a binding that satisfy
+    <p><code>nstore-select</code> will generate a binding that satisfy
         the following:</p>
 
     <div><pre>(assume (hasmap->alist binding) '((blog/title . "https://hyper.dev")))</pre></div>
@@ -248,13 +248,13 @@
     <div><pre>(list (nstore-var 'blog/url) "url/valid" (nstore-var 'url/valid))</pre></div>
 
     <p><code>nstore-where</code> will bind the pattern using the binding that
-        <code>nstore-from</code> generate as described above, which will result
+        <code>nstore-select</code> generate as described above, which will result
         in the following pattern:</p>
 
     <div><pre>(list "https://hyper.dev" "url/valid" (nstore-var 'url/valid))</pre></div>
 
     <p>Then that pattern is used to look up matching tuples in the
-        database similarly to how <code>nstore-from</code> generated the first binding.
+        database similarly to how <code>nstore-select</code> generated the first binding.
         If there is a matching tuple, it generate a new binding. For instance,
         if there is a tuple like the following:</p>
 
@@ -345,7 +345,7 @@
 <a class="sourceLine" id="cb1-55" data-line-number="55">                       (generator-map-&gt;list</a>
 <a class="sourceLine" id="cb1-56" data-line-number="56">                        (<span class="kw">lambda</span> (binding) (hashmap-ref binding &#39;post/title))</a>
 <a class="sourceLine" id="cb1-57" data-line-number="57">                        (nstore-query</a>
-<a class="sourceLine" id="cb1-58" data-line-number="58">                         (nstore-from transaction triplestore</a>
+<a class="sourceLine" id="cb1-58" data-line-number="58">                         (nstore-select transaction triplestore</a>
 <a class="sourceLine" id="cb1-59" data-line-number="59">                                      (<span class="kw">list</span> (nstore-var &#39;post/title)</a>
 <a class="sourceLine" id="cb1-60" data-line-number="60">                                            &#39;post/keyword</a>
 <a class="sourceLine" id="cb1-61" data-line-number="61">                                            &#39;scheme))</a>
