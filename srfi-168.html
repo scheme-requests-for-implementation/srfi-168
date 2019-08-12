@@ -284,6 +284,32 @@
         ((_ value f rest ...)
          (nstore-query (f value) rest ...))))</pre></div>
 
+    <h3 id="hooks">Hooks</h3>
+
+    <p><a href="https://srfi.schemers.org/srfi-173/">SRFI-173</a> hooks
+        are procedures that are executed at specific time during the
+        life of an nstore. They allow to sneak into the mutation
+        procedures to do validation, keep indices synchronized or
+        other operations.</p>
+
+    <h4 id="nstore-hook-on-add"><code>(nstore-hook-on-add nstore)</code></h4>
+
+    <p>This procedure return the hook object associated with <code>nstore-add</code>
+        procedure.</p>
+
+    <p>The hook is run before the operation is executed. The procedures associated
+        with the hook will take a SRFI-167 <code>transaction</code> object
+        along the tuple that is added. The arity of the hook is two.</p>
+
+    <h4 id="nstore-hook-on-delete"><code>(nstore-hook-on-delete nstore)</code></h4>
+
+    <p>This procedure return the hook object associated with <code>nstore-delete!</code>
+        procedure.</p>
+
+    <p>The hook is run before the operation is executed. The procedures associated
+        with the hook will take a SRFI-167 <code>transaction</code> object
+        along the tuple that is deleted. The arity of the hook is two.</p>
+
     <h2 id="example">Example</h2>
 
     <p>Here is an example use:</p>
