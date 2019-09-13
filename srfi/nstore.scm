@@ -314,7 +314,7 @@
                               item))
            pattern))
 
-    (define (gscatter generator)
+    (define (gconcatenate generator)
       ;; Return a generator that yields the elements of the generators
       ;; produced by the given GENERATOR. Same as gflatten but
       ;; GENERATOR contains other generators instead of lists.
@@ -336,7 +336,7 @@
       (lambda (transaction nstore pattern)
         (assume (= (length pattern) (nstore-n nstore)))
         (lambda (from)
-          (gscatter
+          (gconcatenate
            (gmap (lambda (bindings) (%from transaction
                                            nstore
                                            (pattern-bind pattern bindings)
