@@ -198,7 +198,7 @@
     <p><code>nstore-select</code> will generate a binding that satisfy
         the following:</p>
 
-    <div><pre>(assume (hasmap->alist binding) '((blog/title . "https://hyper.dev")))</pre></div>
+    <div><pre>(assume (hashmap->alist binding) '((blog/title . "https://hyper.dev")))</pre></div>
 
     <p>Note: The generator is valid as long as the transaction is running.
         If the transaction is commited the generator will not be able to
@@ -249,7 +249,7 @@
     <p>Let's pick the previous example and imagine that we have a generator
         that contains a binding that satisfy the following:</p>
 
-    <div><pre>(assume (hasmap->alist binding) '((blog/url . "https://hyper.dev")))</pre></div>
+    <div><pre>(assume (hashmap->alist binding) '((blog/url . "https://hyper.dev")))</pre></div>
 
     <div>Given another pattern passed to <code>nstore-where</code>:</div>
 
