@@ -34,6 +34,7 @@
   (import (scheme mapping hash))
   (import (scheme generator))
 
+  (import (hook))
   (import (pack))
 
   (begin
@@ -149,16 +150,24 @@
       (prefix engine-prefix))
 
     (define-record-type <nstore>
-      (make-nstore engine prefix prefix-length indices n)
+      (make-nstore engine prefix prefix-length indices n hook-on-add hook-on-delete)
       nstore?
       (engine nstore-engine-ref)
       (prefix nstore-prefix)
       (prefix-length nstore-prefix-length)
       (indices nstore-indices)
-      (n nstore-n))
+      (n nstore-n)
+      (hook-on-add nstore-hook-on-add)
+      (hook-on-delete nstore-hook-on-delete))
 
     (define (nstore engine prefix items)
-      (make-nstore engine prefix (length prefix) (make-indices (length items)) (length items)))
+      (make-nstore engine
+                   prefix
+                   (length prefix)
+                   (make-indices (length items))
+                   (length items)
+                   (make-hook 2)
+                   (make-hook 2)))
 
     (define nstore-ask?
       (lambda (transaction nstore items)
@@ -191,6 +200,7 @@
     (define nstore-add!
       (lambda (transaction nstore items)
         (assume (= (length items) (nstore-n nstore)))
+        (hook-run (nstore-hook-on-add nstore) nstore items)
         (let ((engine (nstore-engine-ref nstore))
               (nstore-prefix (nstore-prefix nstore)))
           ;; add ITEMS into the okvs and prefix each of the permutation
@@ -208,6 +218,7 @@
     (define nstore-delete!
       (lambda (transaction nstore items)
         (assume (= (length items) (nstore-n nstore)))
+        (hook-run (nstore-hook-on-delete nstore) nstore items)
         (let ((engine (nstore-engine-ref nstore))
               (nstore-prefix (nstore-prefix nstore)))
           ;; Similar to the above but remove ITEMS
