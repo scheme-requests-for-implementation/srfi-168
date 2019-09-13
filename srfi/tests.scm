@@ -28,6 +28,7 @@
         (scheme comparator)
         (scheme mapping hash)
 
+        (pack)
         (okvs)
         (nstore))
 
@@ -35,7 +36,7 @@
 (test-begin "nstore")
 
 (define (triplestore)
-  (let ((engine (nstore-engine okvs-ref okvs-set! okvs-delete! okvs-prefix-range)))
+  (let ((engine (nstore-engine okvs-ref okvs-set! okvs-delete! okvs-prefix-range pack unpack)))
     (nstore engine (list 42 1337) '(uid key value))))
 
 (test-equal "ask empty triplestore"

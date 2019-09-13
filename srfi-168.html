@@ -99,10 +99,18 @@
       Ordered Key Value Store SRFI so that it possible to swap one
       storage engine with another seamlessly.</p>
 
-    <h3 id="nstore-engine"><code>(nstore-engine ref set! delete! prefix-range)</code></h3>
+    <h3 id="nstore-engine"><code>(nstore-engine ref set! delete! prefix-range pack unpack)</code></h3>
 
     <p>Return an object suitable to pass to the <code>nstore</code>
         procedure.</p>
+
+    <p><code>ref</code>, <code>set!</code>, <code>delete!</code> and <code>prefix-range</code>
+        should be SRFI-167 procedures.</p>
+
+    <p><code>pack</code> and <code>unpack</code> are respectively
+        lexicographic packing and unpacking procedures. They must
+        convert back and forth between scheme objects and bytes while
+        preserving their natural order.</p>
 
     <h3 id="nstore-engine?"><code>(nstore-engine? object)</code></h3>
 

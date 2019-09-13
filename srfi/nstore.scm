@@ -35,7 +35,6 @@
   (import (scheme generator))
 
   (import (hook))
-  (import (pack))
 
   (begin
 
@@ -142,12 +141,14 @@
                                      out))))))))))
 
     (define-record-type <engine>
-      (nstore-engine ref set! delete! prefix)
+      (nstore-engine ref set! delete! prefix pack unpack)
       engine?
       (ref engine-ref)
       (set! engine-set!)
       (delete! engine-delete!)
-      (prefix engine-prefix))
+      (prefix engine-prefix)
+      (pack engine-pack)
+      (unpack engine-unpack))
 
     (define-record-type <nstore>
       (make-nstore engine prefix prefix-length indices n hook-on-add hook-on-delete)
@@ -176,10 +177,9 @@
         ;; index is always (iota n) also known as the base index. So that
         ;; there is no need to permute ITEMS.  zero in the following
         ;; cons* is the index of the base index in nstore-indices
-        (let ((key (apply pack (append (nstore-prefix nstore) (list 0) items))))
+        (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+                          (append (nstore-prefix nstore) (list 0) items))))
           (not (not ((engine-ref (nstore-engine-ref nstore)) transaction key))))))
-
-    (define true (pack #t))
 
     (define (make-tuple list permutation)
       ;; Construct a permutation of LIST based on PERMUTATION
@@ -199,6 +199,7 @@
 
     (define nstore-add!
       (lambda (transaction nstore items)
+        (define true ((engine-pack (nstore-engine-ref nstore)) #t))
         (assume (= (length items) (nstore-n nstore)))
         (hook-run (nstore-hook-on-add nstore) nstore items)
         (let ((engine (nstore-engine-ref nstore))
@@ -209,9 +210,10 @@
           (let loop ((indices (nstore-indices nstore))
                      (subspace 0))
             (unless (null? indices)
-              (let ((key (apply pack (append nstore-prefix
-                                             (list subspace)
-                                             (permute items (car indices))))))
+              (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+                                (append nstore-prefix
+                                        (list subspace)
+                                        (permute items (car indices))))))
                 ((engine-set! engine) transaction key true)
                 (loop (cdr indices) (+ 1 subspace))))))))
 
@@ -225,9 +227,10 @@
           (let loop ((indices (nstore-indices nstore))
                      (subspace 0))
             (unless (null? indices)
-              (let ((key (apply pack (append nstore-prefix
-                                             (list subspace)
-                                             (permute items (car indices))))))
+              (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+                                (append nstore-prefix
+                                        (list subspace)
+                                        (permute items (car indices))))))
                 ((engine-delete! engine) transaction key)
                 (loop (cdr indices) (+ subspace 1))))))))
 
@@ -297,11 +300,13 @@
                 (engine (nstore-engine-ref nstore)))
             (gmap (lambda (pair)
                     (bind* pattern
-                           (make-tuple (drop (unpack (car pair))
+                           (make-tuple (drop ((engine-unpack (nstore-engine-ref nstore)) (car pair))
                                              (+ (nstore-prefix-length nstore) 1))
                                        index)
                            seed))
-                  ((engine-prefix engine) transaction (apply pack prefix) config))))))
+                  ((engine-prefix engine)
+                   transaction
+                   (apply (engine-pack (nstore-engine-ref nstore)) prefix) config))))))
 
     (define comparator (make-eq-comparator))
 
