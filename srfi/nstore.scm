@@ -22,9 +22,9 @@
 ;;; OTHER DEALINGS IN THE SOFTWARE.
 (define-library (nstore)
 
-  (export nstore-engine nstore nstore-ask? nstore-add! nstore-rm!
+  (export nstore-engine nstore nstore-ask? nstore-add! nstore-delete!
           nstore-var nstore-var? nstore-var-name
-          nstore-from nstore-where nstore-select)
+          nstore-from nstore-where nstore-query)
 
   (import (only (srfi :145) assume))
   (import (scheme base))
@@ -34,7 +34,7 @@
   (import (scheme mapping hash))
   (import (scheme generator))
 
-  (import (pack))
+  (import (hook))
 
   (begin
 
@@ -108,9 +108,6 @@
                         (car (list-ref x 1)))
                 (loop3 (cdr x) (cons (car x) y))))))
 
-    (define (bool v)
-      (not (not v)))
-
     (define (lex< a b)
       (let loop ((a a)
                  (b b))
@@ -132,7 +129,7 @@
           (if (null? cx)
               (begin (assume (ok? (combinations tab) out))
                      (sort! lex< out))
-              (let loop2 ((L (map (lambda (i) (cons i (bool (memv i (car cx))))) tab))
+              (let loop2 ((L (map (lambda (i) (cons i (not (not (memv i (car cx)))))) tab))
                           (a '())
                           (b '()))
                 (call-with-values (lambda () (findij L))
@@ -144,23 +141,34 @@
                                      out))))))))))
 
     (define-record-type <engine>
-      (nstore-engine ref set! rm! prefix)
+      (nstore-engine ref set! delete! prefix pack unpack)
       engine?
       (ref engine-ref)
       (set! engine-set!)
-      (rm! engine-rm!)
-      (prefix engine-prefix))
+      (delete! engine-delete!)
+      (prefix engine-prefix)
+      (pack engine-pack)
+      (unpack engine-unpack))
 
     (define-record-type <nstore>
-      (make-nstore engine prefix indices n)
+      (make-nstore engine prefix prefix-length indices n hook-on-add hook-on-delete)
       nstore?
       (engine nstore-engine-ref)
       (prefix nstore-prefix)
+      (prefix-length nstore-prefix-length)
       (indices nstore-indices)
-      (n nstore-n))
+      (n nstore-n)
+      (hook-on-add nstore-hook-on-add)
+      (hook-on-delete nstore-hook-on-delete))
 
     (define (nstore engine prefix items)
-      (make-nstore engine prefix (make-indices (length items)) (length items)))
+      (make-nstore engine
+                   prefix
+                   (length prefix)
+                   (make-indices (length items))
+                   (length items)
+                   (make-hook 2)
+                   (make-hook 2)))
 
     (define nstore-ask?
       (lambda (transaction nstore items)
@@ -169,10 +177,9 @@
         ;; index is always (iota n) also known as the base index. So that
         ;; there is no need to permute ITEMS.  zero in the following
         ;; cons* is the index of the base index in nstore-indices
-        (let ((key (apply pack (append (nstore-prefix nstore) (list 0) items))))
-          (bool ((engine-ref (nstore-engine-ref nstore)) transaction key)))))
-
-    (define true (pack #t))
+        (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+                          (append (nstore-prefix nstore) (list 0) items))))
+          (not (not ((engine-ref (nstore-engine-ref nstore)) transaction key))))))
 
     (define (make-tuple list permutation)
       ;; Construct a permutation of LIST based on PERMUTATION
@@ -181,6 +188,7 @@
         (vector->list tuple)))
 
     (define (permute items index)
+      ;; make-tuple reverse operation
       (let ((items (list->vector items)))
         (let loop ((index index)
                    (out '()))
@@ -191,7 +199,9 @@
 
     (define nstore-add!
       (lambda (transaction nstore items)
+        (define true ((engine-pack (nstore-engine-ref nstore)) #t))
         (assume (= (length items) (nstore-n nstore)))
+        (hook-run (nstore-hook-on-add nstore) nstore items)
         (let ((engine (nstore-engine-ref nstore))
               (nstore-prefix (nstore-prefix nstore)))
           ;; add ITEMS into the okvs and prefix each of the permutation
@@ -200,25 +210,28 @@
           (let loop ((indices (nstore-indices nstore))
                      (subspace 0))
             (unless (null? indices)
-              (let ((key (apply pack (append nstore-prefix
-                                             (list subspace)
-                                             (permute items (car indices))))))
+              (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+                                (append nstore-prefix
+                                        (list subspace)
+                                        (permute items (car indices))))))
                 ((engine-set! engine) transaction key true)
                 (loop (cdr indices) (+ 1 subspace))))))))
 
-    (define nstore-rm!
+    (define nstore-delete!
       (lambda (transaction nstore items)
         (assume (= (length items) (nstore-n nstore)))
+        (hook-run (nstore-hook-on-delete nstore) nstore items)
         (let ((engine (nstore-engine-ref nstore))
               (nstore-prefix (nstore-prefix nstore)))
           ;; Similar to the above but remove ITEMS
           (let loop ((indices (nstore-indices nstore))
                      (subspace 0))
             (unless (null? indices)
-              (let ((key (apply pack (append nstore-prefix
-                                             (list subspace)
-                                             (permute items (car indices))))))
-                ((engine-rm! engine) transaction key)
+              (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+                                (append nstore-prefix
+                                        (list subspace)
+                                        (permute items (car indices))))))
+                ((engine-delete! engine) transaction key)
                 (loop (cdr indices) (+ subspace 1))))))))
 
     (define-record-type <nstore-var>
@@ -287,9 +300,13 @@
                 (engine (nstore-engine-ref nstore)))
             (gmap (lambda (pair)
                     (bind* pattern
-                           (make-tuple (cddr (unpack (car pair))) index)
+                           (make-tuple (drop ((engine-unpack (nstore-engine-ref nstore)) (car pair))
+                                             (+ (nstore-prefix-length nstore) 1))
+                                       index)
                            seed))
-                  ((engine-prefix engine) transaction (apply pack prefix) config))))))
+                  ((engine-prefix engine)
+                   transaction
+                   (apply (engine-pack (nstore-engine-ref nstore)) prefix) config))))))
 
     (define comparator (make-eq-comparator))
 
@@ -313,7 +330,7 @@
                               item))
            pattern))
 
-    (define (gscatter generator)
+    (define (gconcatenate generator)
       ;; Return a generator that yields the elements of the generators
       ;; produced by the given GENERATOR. Same as gflatten but
       ;; GENERATOR contains other generators instead of lists.
@@ -335,7 +352,7 @@
       (lambda (transaction nstore pattern)
         (assume (= (length pattern) (nstore-n nstore)))
         (lambda (from)
-          (gscatter
+          (gconcatenate
            (gmap (lambda (bindings) (%from transaction
                                            nstore
                                            (pattern-bind pattern bindings)
@@ -343,8 +360,8 @@
                                            '()))
                  from)))))
 
-    (define-syntax nstore-select
+    (define-syntax nstore-query
       (syntax-rules ()
         ((_ value) value)
         ((_ value f rest ...)
-         (nstore-select (f value) rest ...))))))
+         (nstore-query (f value) rest ...))))))

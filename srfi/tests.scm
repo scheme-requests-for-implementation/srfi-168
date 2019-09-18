@@ -28,6 +28,7 @@
         (scheme comparator)
         (scheme mapping hash)
 
+        (pack)
         (okvs)
         (nstore))
 
@@ -35,12 +36,12 @@
 (test-begin "nstore")
 
 (define (triplestore)
-  (let ((engine (nstore-engine okvs-ref okvs-set! okvs-delete! okvs-prefix)))
-    (nstore engine (list 42) '(uid key value))))
+  (let ((engine (nstore-engine okvs-ref okvs-set! okvs-delete! okvs-prefix-range pack unpack)))
+    (nstore engine (list 42 1337) '(uid key value))))
 
 (test-equal "ask empty triplestore"
   #f
-  (let ((okvs (okvs #t))
+  (let ((okvs (okvs-open #t))
         (triplestore (triplestore)))
     ;; ask
     (let ((out (okvs-in-transaction
@@ -52,7 +53,7 @@
 
 (test-equal "add and ask triplestore"
   #t
-  (let ((okvs (okvs #t))
+  (let ((okvs (okvs-open #t))
         (triplestore (triplestore)))
     ;; add
     (okvs-in-transaction
@@ -70,7 +71,7 @@
 
 (test-equal "add, rm and ask triplestore"
   #f
-  (let ((okvs (okvs #t))
+  (let ((okvs (okvs-open #t))
         (triplestore (triplestore)))
 
     (let ((out
@@ -80,7 +81,7 @@
               ;; add!
               (nstore-add! transaction triplestore '("P4X432" blog/title "hyper.dev"))
               ;; remove!
-              (nstore-rm! transaction triplestore '("P4X432" blog/title "hyper.dev"))
+              (nstore-delete! transaction triplestore '("P4X432" blog/title "hyper.dev"))
               ;; ask
               (nstore-ask? transaction triplestore '("P4X432" blog/title "hyper.dev"))))))
       (okvs-close okvs)
@@ -89,7 +90,7 @@
 (test-equal "blog query post titles"
   '("DIY a database" "DIY a full-text search engine")
 
-  (let ((okvs (okvs #t))
+  (let ((okvs (okvs-open #t))
         (triplestore (triplestore)))
     (okvs-in-transaction
      okvs
@@ -110,7 +111,7 @@
     (let ()
       (define query
         (lambda (transaction blog/title)
-          (generator->list (nstore-select
+          (generator->list (nstore-query
                             (nstore-from transaction triplestore
                                          (list (nstore-var 'blog/uid)
                                                'blog/title

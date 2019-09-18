@@ -72,42 +72,18 @@
 
     <h1>Specification</h1>
 
-    <p>This specification defines four disjoint types:</p>
+    <p>The following specification defines two disjoint types:</p>
 
     <ul>
-        <li><code>engine</code> exposes a lexicographically ordered key
-	    store interface as described in the Ordered Key Value Store
-	    SRFI.</li>
         <li><code>nstore</code> is an n-tuple store database where n is
 	    fixed.</li>
-      <li><code>variable</code> is an immutable object associated
-	  with a symbol.</li>
+        <li><code>variable</code> is an immutable object associated
+	    with a symbol.</li>
     </ul>
 
     <p>Also, an implementation must rely on SRFI-158 generators to
-      implement streams and SRFI-146 hash mappings to implement
-      bindings.</p>
-
-    <p>The first section describes the <code>engine</code>
-        type that allows one to configure the storage mechanism.  The
-        second section describes the public interface of the generic
-        tuple store abstraction.  </p>
-
-    <h2 id="pluggable-storage-engine">Pluggable Storage Engine</h2>
-
-    <p>The storage engine type exposes the interface described in the
-      Ordered Key Value Store SRFI so that it possible to swap one
-      storage engine with another seamlessly.</p>
-
-    <h3 id="nstore-engine"><code>(nstore-engine ref set! delete! prefix)</code></h3>
-
-    <p>Return an object suitable to pass to the <code>nstore</code>
-        procedure.</p>
-
-    <h3 id="nstore-engine?"><code>(nstore-engine? object)</code></h3>
-
-    <p>Return true if <code>OBJECT</code> is an nstore engine and
-    false otherwise.</p>
+      implement streams, SRFI-146 hash mappings to implement
+      bindings and SRFI-173 hooks.</p>
 
     <h2 id="generic-tuple-store-database">Generic Tuple Store Database</h2>
 
@@ -117,14 +93,16 @@
 
     <h3 id="nstore"><code>(nstore engine prefix items)</code></h3>
 
-    <p>Return an <code>nstore</code> object. <code>ENGINE</code> is
-        described above.  <code>DATABASE</code> is an okvs object as
-        described in SRFI-167.  <code>ITEMS</code> describes the names
-        given to a tuple’s items.  It should be a list of symbols.</p>
+    <p>Return an <code>nstore</code> object. <code>ENGINE</code> is a
+        <code>engine</code> record instance as return by <code>make-default-engine</code>
+        described in SRFI-167.
+        <code>DATABASE</code> is an <code>okvs</code> record instance
+        in SRFI-167.  <code>ITEMS</code> describes the names given to
+        a tuple’s items.  It should be a list of symbols.</p>
 
     <p>In the following, <code>ITEMS</code> is always a list of Scheme
         objects.  What is accepted in the <code>ITEMS</code> list depends on
-        the implementation.</p>
+        the implementation of the packing procedures of the <code>engine</code>.</p>
 
     <h3 id="nstore-predicate"><code>(nstore? object)</code></h3>
 
@@ -166,13 +144,31 @@
       If <code>VARIABLE</code> is not a variable is the sense of
       <code>var?</code>, the returned value is unspecified.</p>
 
-    <h3 id="nstore-from"><code>(nstore-from transaction nstore pattern [config]) → generator</code></h3>
+    <h3 id="nstore-select"><code>(nstore-select transaction nstore pattern [config]) → generator</code></h3>
 
     <p>Return a generator of bindings where variables (in the sense of
       <code>nstore-var?</code>) of <code>PATTERN</code> are bound against one or
       more <em>matching</em> tuples from the store associated with
       <code>TRANSACTION</code>.  The implementation must return a
       SRFI-158 generator of SRFI-146 hash mappings.</p>
+
+    <p>A tuple <em>match</em> a pattern if the tuple has the same
+        items that are not variables as the pattern. The variable will
+        add a key-value pair in a binding that will associate the
+        pattern name with the corresponding value in the tuple.</p>
+
+    <p>For example, given the following pattern:</p>
+
+    <div><pre>(list "P4X432" "blog/url" (nstore-var 'blog/title))</pre></div>
+
+    <p>And given the following tuple in the database:</p>
+
+    <div><pre>(list "P4X432" "blog/url" "https://hyper.dev")</pre></div>
+
+    <p><code>nstore-select</code> will generate a binding that satisfy
+        the following:</p>
+
+    <div><pre>(assume (hashmap->alist binding) '((blog/title . "https://hyper.dev")))</pre></div>
 
     <p>Note: The generator is valid as long as the transaction is running.
         If the transaction is commited the generator will not be able to
@@ -220,14 +216,77 @@
     <p>Note: The generator returned by <code>nstore-where</code> is flat.  It
         is NOT a generator of generators.</p>
 
+    <p>Let's pick the previous example and imagine that we have a generator
+        that contains a binding that satisfy the following:</p>
+
+    <div><pre>(assume (hashmap->alist binding) '((blog/url . "https://hyper.dev")))</pre></div>
+
+    <div>Given another pattern passed to <code>nstore-where</code>:</div>
+
+    <div><pre>(list (nstore-var 'blog/url) "url/valid" (nstore-var 'url/valid))</pre></div>
+
+    <p><code>nstore-where</code> will bind the pattern using the binding that
+        <code>nstore-select</code> generate as described above, which will result
+        in the following pattern:</p>
+
+    <div><pre>(list "https://hyper.dev" "url/valid" (nstore-var 'url/valid))</pre></div>
+
+    <p>Then that pattern is used to look up matching tuples in the
+        database similarly to how <code>nstore-select</code> generated the first binding.
+        If there is a matching tuple, it generate a new binding. For instance,
+        if there is a tuple like the following:</p>
+
+    <div><pre>(list "https://hyper.dev" 'url/valid #t)</pre></div>
+
+    <p>In that case, the original binding will generate one new binding that
+        associates <code>'url/valid</code> to <code>#t</code></p>
+
+    <p>Otherwise there is no matching tuple, the original binding is
+        discarded possibly making the generator returned by <code>nstore-where</code>
+        empty.</p>
+
     <p>Note: the generator is valid as long as the transaction is running.
         If the transaction is commited the generator will not be able to
         proceed.</p>
 
-    <h3 id="nstore-select"><code>(nstore-select &lt;from&gt; &lt;where&gt; ...)</code> syntax</h3>
+    <h3 id="nstore-query"><code>(nstore-query &lt;from&gt; &lt;where&gt; ...) → generator</code> syntax</h3>
 
-    <p><code>nstore-select</code> allows one to compose <code>nstore-from</code>
-        with one or more <code>nstore-where</code> to execute a query.</p>
+    <p><code>nstore-query</code> will chain the generators passing what is generated
+        by the <code>select</code> clause to the <code>where</code> clauses in order.</p>
+
+    <p>Here the definition of <code>nstore-query</code></p>
+
+    <div><pre>    (define-syntax nstore-query
+      (syntax-rules ()
+        ((_ value) value)
+        ((_ value f rest ...)
+         (nstore-query (f value) rest ...))))</pre></div>
+
+    <h3 id="hooks">Hooks</h3>
+
+    <p><a href="https://srfi.schemers.org/srfi-173/">SRFI-173</a> hooks
+        are procedures that are executed at specific time during the
+        life of an nstore. They allow to sneak into the mutation
+        procedures to do validation, keep indices synchronized or
+        other operations.</p>
+
+    <h4 id="nstore-hook-on-add"><code>(nstore-hook-on-add nstore)</code></h4>
+
+    <p>This procedure return the hook object associated with <code>nstore-add</code>
+        procedure.</p>
+
+    <p>The hook is run before the operation is executed. The procedures associated
+        with the hook will take a SRFI-167 <code>transaction</code> object
+        along the tuple that is added. The arity of the hook is two.</p>
+
+    <h4 id="nstore-hook-on-delete"><code>(nstore-hook-on-delete nstore)</code></h4>
+
+    <p>This procedure return the hook object associated with <code>nstore-delete!</code>
+        procedure.</p>
+
+    <p>The hook is run before the operation is executed. The procedures associated
+        with the hook will take a SRFI-167 <code>transaction</code> object
+        along the tuple that is deleted. The arity of the hook is two.</p>
 
     <h2 id="example">Example</h2>
 
@@ -242,8 +301,8 @@
 <a class="sourceLine" id="cb1-7" data-line-number="7"></a>
 <a class="sourceLine" id="cb1-8" data-line-number="8"></a>
 <a class="sourceLine" id="cb1-9" data-line-number="9">(<span class="kw">define</span><span class="fu"> </span>(make-triplestore prefix)</a>
-<a class="sourceLine" id="cb1-10" data-line-number="10">  (<span class="kw">let</span> ((engine (nstore-engine okvs-ref okvs-set! okvs-delete! okvs-prefix)))</a>
-<a class="sourceLine" id="cb1-11" data-line-number="11">    (nstore engine prefix &#39;(subject predicate object))))</a>
+<a class="sourceLine" id="cb1-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb1-11" data-line-number="11">    (nstore engine prefix &#39;(subject predicate object)))</a>
 <a class="sourceLine" id="cb1-12" data-line-number="12"></a>
 <a class="sourceLine" id="cb1-13" data-line-number="13"></a>
 <a class="sourceLine" id="cb1-14" data-line-number="14">(<span class="kw">define</span><span class="fu"> triplestore </span>(make-triplestore &#39;(<span class="dv">0</span>)))</a>
@@ -289,8 +348,8 @@
 <a class="sourceLine" id="cb1-54" data-line-number="54">                     (<span class="kw">lambda</span> (transaction)</a>
 <a class="sourceLine" id="cb1-55" data-line-number="55">                       (generator-map-&gt;list</a>
 <a class="sourceLine" id="cb1-56" data-line-number="56">                        (<span class="kw">lambda</span> (binding) (hashmap-ref binding &#39;post/title))</a>
-<a class="sourceLine" id="cb1-57" data-line-number="57">                        (nstore-select</a>
-<a class="sourceLine" id="cb1-58" data-line-number="58">                         (nstore-from transaction triplestore</a>
+<a class="sourceLine" id="cb1-57" data-line-number="57">                        (nstore-query</a>
+<a class="sourceLine" id="cb1-58" data-line-number="58">                         (nstore-select transaction triplestore</a>
 <a class="sourceLine" id="cb1-59" data-line-number="59">                                      (<span class="kw">list</span> (nstore-var &#39;post/title)</a>
 <a class="sourceLine" id="cb1-60" data-line-number="60">                                            &#39;post/keyword</a>
 <a class="sourceLine" id="cb1-61" data-line-number="61">                                            &#39;scheme))</a>
@@ -304,7 +363,8 @@
     <h1>Implementation</h1>
 
     <p>Here is the <a href="https://srfi.schemers.org/srfi-168/srfi-168.tgz">sample
-      implementation</a>.</p>
+        implementation</a>. Another implementation is available in <a href="https://github.com/scheme-live/around-ordered-key-value-stores/">around
+        ordered key-value stores</a>.</p>
 
     <h1>Acknowledgements</h1>
 
