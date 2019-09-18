@@ -93,7 +93,7 @@
 
     <h3 id="nstore"><code>(nstore engine prefix items)</code></h3>
 
-    <p>Return an <code>nstore</code> object. <code>ENGINE</code> is a
+    <p>Return an <code>nstore</code> object. <code>ENGINE</code> is an
         <code>engine</code> record instance as return by <code>make-default-engine</code>
         described in SRFI-167.
         <code>DATABASE</code> is an <code>okvs</code> record instance
@@ -152,7 +152,7 @@
       <code>TRANSACTION</code>.  The implementation must return a
       SRFI-158 generator of SRFI-146 hash mappings.</p>
 
-    <p>A tuple <em>match</em> a pattern if the tuple has the same
+    <p>A tuple <em>matches</em> a pattern if the tuple has the same
         items that are not variables as the pattern. The variable will
         add a key-value pair in a binding that will associate the
         pattern name with the corresponding value in the tuple.</p>
@@ -165,7 +165,7 @@
 
     <div><pre>(list "P4X432" "blog/url" "https://hyper.dev")</pre></div>
 
-    <p><code>nstore-select</code> will generate a binding that satisfy
+    <p><code>nstore-select</code> will generate a binding that satisfies
         the following:</p>
 
     <div><pre>(assume (hashmap->alist binding) '((blog/title . "https://hyper.dev")))</pre></div>
@@ -217,7 +217,7 @@
         is NOT a generator of generators.</p>
 
     <p>Let's pick the previous example and imagine that we have a generator
-        that contains a binding that satisfy the following:</p>
+        that contains a binding that satisfies the following:</p>
 
     <div><pre>(assume (hashmap->alist binding) '((blog/url . "https://hyper.dev")))</pre></div>
 
@@ -226,14 +226,14 @@
     <div><pre>(list (nstore-var 'blog/url) "url/valid" (nstore-var 'url/valid))</pre></div>
 
     <p><code>nstore-where</code> will bind the pattern using the binding that
-        <code>nstore-select</code> generate as described above, which will result
+        <code>nstore-select</code> generated as described above, which will result
         in the following pattern:</p>
 
     <div><pre>(list "https://hyper.dev" "url/valid" (nstore-var 'url/valid))</pre></div>
 
     <p>Then that pattern is used to look up matching tuples in the
         database similarly to how <code>nstore-select</code> generated the first binding.
-        If there is a matching tuple, it generate a new binding. For instance,
+        If there is a matching tuple, it generates a new binding. For instance,
         if there is a tuple like the following:</p>
 
     <div><pre>(list "https://hyper.dev" 'url/valid #t)</pre></div>
@@ -265,28 +265,28 @@
     <h3 id="hooks">Hooks</h3>
 
     <p><a href="https://srfi.schemers.org/srfi-173/">SRFI-173</a> hooks
-        are procedures that are executed at specific time during the
-        life of an nstore. They allow to sneak into the mutation
-        procedures to do validation, keep indices synchronized or
+        are procedures that are executed at specific times during the
+        life of an nstore. They allow one to sneak into the mutation
+        procedures to do validation, keep indices synchronized or carry out
         other operations.</p>
 
     <h4 id="nstore-hook-on-add"><code>(nstore-hook-on-add nstore)</code></h4>
 
-    <p>This procedure return the hook object associated with <code>nstore-add</code>
+    <p>This procedure returns the hook object associated with <code>nstore-add</code>
         procedure.</p>
 
     <p>The hook is run before the operation is executed. The procedures associated
         with the hook will take a SRFI-167 <code>transaction</code> object
-        along the tuple that is added. The arity of the hook is two.</p>
+        along with the tuple that is added. The arity of the hook is two.</p>
 
     <h4 id="nstore-hook-on-delete"><code>(nstore-hook-on-delete nstore)</code></h4>
 
-    <p>This procedure return the hook object associated with <code>nstore-delete!</code>
+    <p>This procedure returns the hook object associated with <code>nstore-delete!</code>
         procedure.</p>
 
     <p>The hook is run before the operation is executed. The procedures associated
         with the hook will take a SRFI-167 <code>transaction</code> object
-        along the tuple that is deleted. The arity of the hook is two.</p>
+        along with the tuple that is deleted. The arity of the hook is two.</p>
 
     <h2 id="example">Example</h2>
 
