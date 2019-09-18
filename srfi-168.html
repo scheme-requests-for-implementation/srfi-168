@@ -72,12 +72,9 @@
 
     <h1>Specification</h1>
 
-    <p>The following specification defines three disjoint types:</p>
+    <p>The following specification defines two disjoint types:</p>
 
     <ul>
-        <li><code>engine</code> exposes a lexicographically ordered key
-	    store interface as described in the Ordered Key Value Store
-	    SRFI.</li>
         <li><code>nstore</code> is an n-tuple store database where n is
 	    fixed.</li>
         <li><code>variable</code> is an immutable object associated
@@ -85,37 +82,8 @@
     </ul>
 
     <p>Also, an implementation must rely on SRFI-158 generators to
-      implement streams and SRFI-146 hash mappings to implement
-      bindings.</p>
-
-    <p>The first section describes the <code>engine</code>
-        type that allows one to configure the storage mechanism.  The
-        second section describes the public interface of the generic
-        tuple store abstraction.  </p>
-
-    <h2 id="pluggable-storage-engine">Pluggable Storage Engine</h2>
-
-    <p>The storage engine type exposes the interface described in the
-      Ordered Key Value Store SRFI so that it possible to swap one
-      storage engine with another seamlessly.</p>
-
-    <h3 id="nstore-engine"><code>(nstore-engine ref set! delete! prefix-range pack unpack)</code></h3>
-
-    <p>Return an object suitable to pass to the <code>nstore</code>
-        procedure.</p>
-
-    <p><code>ref</code>, <code>set!</code>, <code>delete!</code> and <code>prefix-range</code>
-        should be SRFI-167 procedures.</p>
-
-    <p><code>pack</code> and <code>unpack</code> are respectively
-        lexicographic packing and unpacking procedures. They must
-        convert back and forth between scheme objects and bytes while
-        preserving their natural order.</p>
-
-    <h3 id="nstore-engine?"><code>(nstore-engine? object)</code></h3>
-
-    <p>Return true if <code>OBJECT</code> is an nstore engine and
-    false otherwise.</p>
+      implement streams, SRFI-146 hash mappings to implement
+      bindings and SRFI-173 hooks.</p>
 
     <h2 id="generic-tuple-store-database">Generic Tuple Store Database</h2>
 
@@ -125,14 +93,14 @@
 
     <h3 id="nstore"><code>(nstore engine prefix items)</code></h3>
 
-    <p>Return an <code>nstore</code> object. <code>ENGINE</code> is
-        described above.  <code>DATABASE</code> is an okvs object as
-        described in SRFI-167.  <code>ITEMS</code> describes the names
-        given to a tuple’s items.  It should be a list of symbols.</p>
+    <p>Return an <code>nstore</code> object. <code>ENGINE</code> and
+        <code>DATABASE</code> are described in SRFI-167.  <code>ITEMS</code>
+        describes the names given to a tuple’s items.  It should be
+        a list of symbols.</p>
 
     <p>In the following, <code>ITEMS</code> is always a list of Scheme
         objects.  What is accepted in the <code>ITEMS</code> list depends on
-        the implementation.</p>
+        the implementation of the packing procedures of the <code>engine</code>.</p>
 
     <h3 id="nstore-predicate"><code>(nstore? object)</code></h3>
 
@@ -331,8 +299,8 @@
 <a class="sourceLine" id="cb1-7" data-line-number="7"></a>
 <a class="sourceLine" id="cb1-8" data-line-number="8"></a>
 <a class="sourceLine" id="cb1-9" data-line-number="9">(<span class="kw">define</span><span class="fu"> </span>(make-triplestore prefix)</a>
-<a class="sourceLine" id="cb1-10" data-line-number="10">  (<span class="kw">let</span> ((engine (nstore-engine okvs-ref okvs-set! okvs-delete! okvs-prefix)))</a>
-<a class="sourceLine" id="cb1-11" data-line-number="11">    (nstore engine prefix &#39;(subject predicate object))))</a>
+<a class="sourceLine" id="cb1-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb1-11" data-line-number="11">    (nstore engine prefix &#39;(subject predicate object)))</a>
 <a class="sourceLine" id="cb1-12" data-line-number="12"></a>
 <a class="sourceLine" id="cb1-13" data-line-number="13"></a>
 <a class="sourceLine" id="cb1-14" data-line-number="14">(<span class="kw">define</span><span class="fu"> triplestore </span>(make-triplestore &#39;(<span class="dv">0</span>)))</a>
