@@ -93,10 +93,12 @@
 
     <h3 id="nstore"><code>(nstore engine prefix items)</code></h3>
 
-    <p>Return an <code>nstore</code> object. <code>ENGINE</code> and
-        <code>DATABASE</code> are described in SRFI-167.  <code>ITEMS</code>
-        describes the names given to a tuple’s items.  It should be
-        a list of symbols.</p>
+    <p>Return an <code>nstore</code> object. <code>ENGINE</code> is a
+        <code>engine</code> record instance as return by <code>make-default-engine</code>
+        described in SRFI-167.
+        <code>DATABASE</code> is an <code>okvs</code> record instance
+        in SRFI-167.  <code>ITEMS</code> describes the names given to
+        a tuple’s items.  It should be a list of symbols.</p>
 
     <p>In the following, <code>ITEMS</code> is always a list of Scheme
         objects.  What is accepted in the <code>ITEMS</code> list depends on
