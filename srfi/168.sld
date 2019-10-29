@@ -20,25 +20,27 @@
 ;;; WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 ;;; OTHER DEALINGS IN THE SOFTWARE.
-(define-library (nstore)
+(define-library (srfi 168)
 
   (export nstore-engine nstore nstore-ask? nstore-add! nstore-delete!
           nstore-var nstore-var? nstore-var-name
-          nstore-from nstore-where nstore-query)
+          nstore-from nstore-where nstore-query
+          nstore-hook-on-add nstore-hook-on-delete)
 
-  (import (only (srfi :145) assume))
   (import (scheme base))
   (import (scheme case-lambda))
-  (import (scheme list))
-  (import (scheme comparator))
-  (import (scheme mapping hash))
-  (import (scheme generator))
-
-  (import (hook))
+  (import (scheme sort))
+  (import (srfi 145))
+  (import (srfi 1))
+  (import (srfi 128))
+  (import (srfi 146 hash))
+  (import (srfi 158))
+  (import (srfi 167 engine))
+  (import (srfi 173))
 
   (begin
 
-    ;; helper
+    ;; combinatorics helpers
 
     (define (permutations s)
       ;; http://rosettacode.org/wiki/Permutations#Scheme
@@ -70,15 +72,15 @@
                  (v (map (lambda (x) (cons head x)) s)))
             (append s v))))
 
-    ;; make-indices will compute the minimum number of indices/tables
-    ;; required to bind any pattern in one hop. The math behind this
-    ;; computation is explained at:
+    ;; make-indices will compute smallest set of
+    ;; indices/tables/subspaces required to bind any pattern in one
+    ;; hop. The math behind this computation is explained at:
     ;;
     ;;   https://math.stackexchange.com/q/3146568/23663
     ;;
-    ;; make-indices will return the minimum list of permutations in
-    ;; lexicographic order of the base index ie. (iota n) where n is
-    ;; the length of ITEMS ie. the n in nstore.
+    ;; make-indices will return the smallest set of permutations in
+    ;; lexicographic order of the base index ie. the output of (iota
+    ;; n) where n is the length of ITEMS ie. the n in nstore.
 
     (define (prefix? lst other)
       "Return #t if LST is prefix of OTHER"
@@ -100,10 +102,10 @@
       (let loop3 ((x L)
                   (y '()))
         (if (or (null? x) (null? (cdr x)))
-            (values #f (append (reverse! y) x) #f #f)
+            (values #f (append (reverse y) x) #f #f)
             (if (and (not (cdr (list-ref x 0))) (cdr (list-ref x 1)))
                 (values #t
-                        (append (cddr x) (reverse! y))
+                        (append (cddr x) (reverse y))
                         (car (list-ref x 0))
                         (car (list-ref x 1)))
                 (loop3 (cdr x) (cons (car x) y))))))
@@ -128,7 +130,7 @@
                     (out '()))
           (if (null? cx)
               (begin (assume (ok? (combinations tab) out))
-                     (sort! lex< out))
+                     (list-sort lex< out))
               (let loop2 ((L (map (lambda (i) (cons i (not (not (memv i (car cx)))))) tab))
                           (a '())
                           (b '()))
@@ -137,23 +139,13 @@
                     (if continue?
                         (loop2 L (cons j a) (cons i b))
                         (loop1 (cdr cx)
-                               (cons (append (reverse! a) (map car L) (reverse! b))
+                               (cons (append (reverse a) (map car L) (reverse b))
                                      out))))))))))
-
-    (define-record-type <engine>
-      (nstore-engine ref set! delete! prefix pack unpack)
-      engine?
-      (ref engine-ref)
-      (set! engine-set!)
-      (delete! engine-delete!)
-      (prefix engine-prefix)
-      (pack engine-pack)
-      (unpack engine-unpack))
 
     (define-record-type <nstore>
       (make-nstore engine prefix prefix-length indices n hook-on-add hook-on-delete)
       nstore?
-      (engine nstore-engine-ref)
+      (engine nstore-engine)
       (prefix nstore-prefix)
       (prefix-length nstore-prefix-length)
       (indices nstore-indices)
@@ -173,13 +165,14 @@
     (define nstore-ask?
       (lambda (transaction nstore items)
         (assume (= (length items) (nstore-n nstore)))
-        ;; indices are sorted in lexicographic order, that is the first
-        ;; index is always (iota n) also known as the base index. So that
-        ;; there is no need to permute ITEMS.  zero in the following
-        ;; cons* is the index of the base index in nstore-indices
-        (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+        ;; indices are sorted in lexicographic order, that is the
+        ;; first index is always (iota n) (also known as the base
+        ;; index). So that there is no need to permute ITEMS.  zero in
+        ;; the following `list` is the index of the base subspace in
+        ;; nstore-indices
+        (let ((key (apply engine-pack (nstore-engine nstore)
                           (append (nstore-prefix nstore) (list 0) items))))
-          (not (not ((engine-ref (nstore-engine-ref nstore)) transaction key))))))
+          (not (not (engine-ref (nstore-engine nstore) transaction key))))))
 
     (define (make-tuple list permutation)
       ;; Construct a permutation of LIST based on PERMUTATION
@@ -188,21 +181,21 @@
         (vector->list tuple)))
 
     (define (permute items index)
-      ;; make-tuple reverse operation
+      ;; inverse of `make-tuple`
       (let ((items (list->vector items)))
         (let loop ((index index)
                    (out '()))
           (if (null? index)
-              (reverse! out)
+              (reverse out)
               (loop (cdr index)
                     (cons (vector-ref items (car index)) out))))))
 
     (define nstore-add!
       (lambda (transaction nstore items)
-        (define true ((engine-pack (nstore-engine-ref nstore)) #t))
+        (define true (engine-pack (nstore-engine nstore)) #t)
         (assume (= (length items) (nstore-n nstore)))
         (hook-run (nstore-hook-on-add nstore) nstore items)
-        (let ((engine (nstore-engine-ref nstore))
+        (let ((engine (nstore-engine nstore))
               (nstore-prefix (nstore-prefix nstore)))
           ;; add ITEMS into the okvs and prefix each of the permutation
           ;; of ITEMS with the nstore-prefix and the index of the
@@ -210,28 +203,28 @@
           (let loop ((indices (nstore-indices nstore))
                      (subspace 0))
             (unless (null? indices)
-              (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+              (let ((key (apply engine-pack (nstore-engine nstore)
                                 (append nstore-prefix
                                         (list subspace)
                                         (permute items (car indices))))))
-                ((engine-set! engine) transaction key true)
+                (engine-set! engine transaction key true)
                 (loop (cdr indices) (+ 1 subspace))))))))
 
     (define nstore-delete!
       (lambda (transaction nstore items)
         (assume (= (length items) (nstore-n nstore)))
         (hook-run (nstore-hook-on-delete nstore) nstore items)
-        (let ((engine (nstore-engine-ref nstore))
+        (let ((engine (nstore-engine nstore))
               (nstore-prefix (nstore-prefix nstore)))
           ;; Similar to the above but remove ITEMS
           (let loop ((indices (nstore-indices nstore))
                      (subspace 0))
             (unless (null? indices)
-              (let ((key (apply (engine-pack (nstore-engine-ref nstore))
+              (let ((key (apply engine-pack (nstore-engine nstore)
                                 (append nstore-prefix
                                         (list subspace)
                                         (permute items (car indices))))))
-                ((engine-delete! engine) transaction key)
+                (engine-delete! engine transaction key)
                 (loop (cdr indices) (+ subspace 1))))))))
 
     (define-record-type <nstore-var>
@@ -240,7 +233,7 @@
       (name nstore-var-name))
 
     (define (bind* pattern tuple seed)
-      ;; associate variables of PATTERN to value of TUPLE with SEED.
+      ;; Associate variables of PATTERN to value of TUPLE with SEED.
       (let loop ((tuple tuple)
                  (pattern pattern)
                  (out seed))
@@ -259,7 +252,7 @@
                  (index 0)
                  (out '()))
         (if (null? pattern)
-            (reverse! out)
+            (reverse out)
             (loop (cdr pattern)
                   (+ 1 index)
                   (if (nstore-var? (car pattern))
@@ -267,10 +260,10 @@
                       (cons index out))))))
 
     (define (pattern->index pattern indices)
-      ;; Retrieve the index that will allow to bind pattern in one
-      ;; hop. This is done by getting all non-variable items of the
-      ;; pattern and looking up the first index that is
-      ;; permutation-prefix
+      ;; Retrieve the index and subspace that will allow to bind
+      ;; PATTERN in one hop. This is done by getting all non-variable
+      ;; items of PATTERN and looking up the first index that is
+      ;; permutation-prefix...
       (let ((combination (pattern->combination pattern)))
         (let loop ((indices indices)
                    (subspace 0))
@@ -288,7 +281,7 @@
                  (out '()))
         (let ((v (list-ref pattern (car index))))
           (if (nstore-var? v)
-              (reverse! out)
+              (reverse out)
               (loop (cdr index) (cons v out))))))
 
     (define (%from transaction nstore pattern seed config)
@@ -297,16 +290,16 @@
           (let ((prefix (append (nstore-prefix nstore)
                                 (list subspace)
                                 (pattern->prefix pattern index)))
-                (engine (nstore-engine-ref nstore)))
+                (engine (nstore-engine nstore)))
             (gmap (lambda (pair)
                     (bind* pattern
-                           (make-tuple (drop ((engine-unpack (nstore-engine-ref nstore)) (car pair))
+                           (make-tuple (drop (engine-unpack (nstore-engine nstore) (car pair))
                                              (+ (nstore-prefix-length nstore) 1))
                                        index)
                            seed))
-                  ((engine-prefix engine)
-                   transaction
-                   (apply (engine-pack (nstore-engine-ref nstore)) prefix) config))))))
+                  (engine-prefix-range
+                   engine transaction
+                   (apply engine-pack (nstore-engine nstore) prefix) config))))))
 
     (define comparator (make-eq-comparator))
 
@@ -320,8 +313,8 @@
          (%from transaction nstore pattern (hashmap comparator) config))))
 
     (define (pattern-bind pattern seed)
-      ;; Return a pattern where variables that have a binding in seed
-      ;; are replaced with the associated value. In pratice, most of
+      ;; Return a pattern where variables that have a binding in SEED
+      ;; are replaced with the associated value. In practice, most of
       ;; the time, it is the same pattern with less variables.
       (map (lambda (item) (or (and (nstore-var? item)
                                    (hashmap-ref/default seed
@@ -332,7 +325,7 @@
 
     (define (gconcatenate generator)
       ;; Return a generator that yields the elements of the generators
-      ;; produced by the given GENERATOR. Same as gflatten but
+      ;; produced by the given GENERATOR. Similar to gflatten but
       ;; GENERATOR contains other generators instead of lists.
       (let ((state eof-object))
         (lambda ()
