@@ -63,7 +63,7 @@
       <a href="https://srfi.schemers.org/srfi-128/">SRFI 128</a>,
       <a href="https://srfi.schemers.org/srfi-146/">SRFI 146</a>, and
       <a href="https://srfi.schemers.org/srfi-158/">SRFI 158</a>, and
-      relying on the <a href="https://srfi.schemers.org/srfi-167">Ordered
+      relying on SRFI 167, the <a href="https://srfi.schemers.org/srfi-167">Ordered
 	Key Value Store SRFI</a>.  This SRFI comes with a memory
       storage engine that supports transactions.  It can easily be
       adapted to implement durability relying on one of the various
@@ -99,7 +99,7 @@
         <code>engine</code> record instance as return by <code>make-default-engine</code>
         described in SRFI 167.
         <code>DATABASE</code> is an <code>okvs</code> record instance
-        in SRFI 167.  <code>ITEMS</code> describes the names given to
+        from SRFI 167.  <code>ITEMS</code> describes the names given to
         a tuple’s items.  It should be a list of symbols.</p>
 
     <p>In the following, <code>ITEMS</code> is always a list of Scheme
@@ -143,7 +143,7 @@
     <h3 id="nstore-var-name"><code>(nstore-var-name variable) → symbol</code></h3>
 
     <p>Return the symbol name associated with <code>VARIABLE</code>.
-      If <code>VARIABLE</code> is not a variable is the sense of
+      If <code>VARIABLE</code> is not a variable in the sense of
       <code>var?</code>, the returned value is unspecified.</p>
 
     <h3 id="nstore-select"><code>(nstore-select transaction nstore pattern [config]) → generator</code></h3>
